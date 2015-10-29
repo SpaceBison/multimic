@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="GainIndicator">
+        <attr name="clipColor" format="color" />
+        <attr name="clipThreshold" format="float" />
+        <attr name="stepSweep" format="float" />
+        <attr name="radius" format="float" />
+        <attr name="minGainSize" format="float" />
+        <attr name="maxGainSize" format="float" />
+    </declare-styleable>
+</resources>
