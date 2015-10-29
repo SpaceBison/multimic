@@ -1,9 +1,11 @@
 package org.spacebison.multimic;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
@@ -48,6 +50,16 @@ public class ServerSearchActivity extends Activity {
         ListView serverListView = (ListView) findViewById(R.id.serverList);
         mArrayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, mServerList);
         serverListView.setAdapter(mArrayAdapter);
+        serverListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                ServerAddress serverAddress = (ServerAddress) adapterView.getAdapter().getItem(i);
+                Intent intent = new Intent(ServerSearchActivity.this, AudioRecordActivity.class);
+                intent.putExtra(AudioRecordActivity.EXTRA_SERVER_ADDRESS, serverAddress.mAddress);
+                intent.putExtra(AudioRecordActivity.EXTRA_SERVER_PORT, serverAddress.mPort);
+                startActivity(intent);
+            }
+        });
     }
 
     public void clickSearch(View view) {

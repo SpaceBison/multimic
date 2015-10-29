@@ -17,6 +17,7 @@ public class MulticastServiceProvider {
     private String mAddress;
     private int mServicePort;
     private int mPort;
+    private OnRequestReceivedListener mOnRequestReceivedListener;
 
     public MulticastServiceProvider(String multicastAddress, int multicastPort, int servicePort) {
         mPort = multicastPort;
@@ -30,6 +31,10 @@ public class MulticastServiceProvider {
 
     public void stop() {
         mThread.interrupt();
+    }
+
+    public void setOnRequestReceivedListener(OnRequestReceivedListener onRequestReceivedListener) {
+        mOnRequestReceivedListener = onRequestReceivedListener;
     }
 
     private class BroadcastListenerThread extends Thread {
@@ -58,9 +63,15 @@ public class MulticastServiceProvider {
                     socket.receive(packet);
                     Log.d(TAG, "Received request from: " + packet.getAddress());
 
+                    if (mOnRequestReceivedListener != null) {
+                        mOnRequestReceivedListener.onRequestReceived(packet);
+                    }
+
                     DatagramSocket clientSocket = new DatagramSocket();
                     clientSocket.connect(packet.getAddress(), packet.getPort());
-                    byte[] responseBytes = (new DiscoveryResponse(InetAddress.getLocalHost(), mServicePort).getBytes());
+                    DiscoveryResponse discoveryResponse = new DiscoveryResponse(socket.getNetworkInterface().getInetAddresses().nextElement(), mServicePort);
+                    Log.d(TAG, "Sending response: " + discoveryResponse);
+                    byte[] responseBytes = discoveryResponse.getBytes();
                     clientSocket.send(new DatagramPacket(responseBytes, responseBytes.length));
                     clientSocket.close();
                 } catch (IOException e) {

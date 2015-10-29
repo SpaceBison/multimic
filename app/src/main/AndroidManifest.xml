@@ -27,6 +27,11 @@
             android:label="Server"
             android:theme="@style/AppTheme.NoActionBar" >
         </activity>
+        <activity
+            android:name=".AudioRecordActivity"
+            android:label="Audio Record"
+            android:theme="@style/AppTheme.NoActionBar" >
+        </activity>
 
     </application>
 

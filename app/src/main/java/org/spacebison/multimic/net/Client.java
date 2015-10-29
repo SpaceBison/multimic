@@ -8,7 +8,6 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketAddress;
 
 /**
  * Created by cmb on 24.10.15.
@@ -17,7 +16,8 @@ public class Client {
     private static final String TAG = "cmb.Client";
     private static final int BUFFER_SIZE = 1024;
     private final Socket mSocket = new Socket();
-    private SocketAddress mServerAddress;
+    private InetAddress mServerAddress;
+    private int mServerPort;
     private final ClientThread mClientThread = new ClientThread();
     private SendThread mSendThread;
     private InputStream mInputStream;
@@ -25,7 +25,8 @@ public class Client {
     private OnConnectionErrorListener mErrorListener;
 
     public Client(InetAddress address, int port) {
-        mServerAddress = new InetSocketAddress(address, port);
+        mServerAddress = address;
+        mServerPort = port;
     }
 
     public void setOnConnectedListener(OnConnectedListener onConnectedListener) {
@@ -61,16 +62,16 @@ public class Client {
         public void run() {
             Log.d(TAG, "Starting thread");
             try {
-                mSocket.connect(mServerAddress);
+                mSocket.connect(new InetSocketAddress(mServerAddress, mServerPort));
             } catch (IOException e) {
-                Log.e(TAG, "Error connecting to " + mServerAddress);
+                Log.e(TAG, "Error connecting to " + mServerAddress + ':' + mServerPort + ": " + e);
                 if (mErrorListener != null) {
                     mErrorListener.onConnectionError(e);
                 }
                 return;
             }
 
-            Log.d(TAG, "Connected: " + mSocket);
+            Log.d(TAG, "Connected: " + mSocket.getInetAddress());
 
             if (mOnConnectedListener != null) {
                 mOnConnectedListener.onConnected(mSocket);

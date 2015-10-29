@@ -4,9 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 /**
  * Created by cmb on 24.10.15.
@@ -53,6 +51,11 @@ public class DiscoveryResponse {
             bais.read(portBytes);
             bais.read(addressBytes);
 
-            return new DiscoveryResponse(InetAddress.getByAddress(addressBytes), ByteBuffer.allocate(PORT_BYTES).getInt());
+            return new DiscoveryResponse(InetAddress.getByAddress(addressBytes), ByteBuffer.wrap(portBytes).getInt());
+    }
+
+    @Override
+    public String toString() {
+        return "DiscoveryResponse[" + mAddress + ':' + mPort + ']';
     }
 }

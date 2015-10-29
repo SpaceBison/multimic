@@ -6,6 +6,7 @@ import org.spacebison.multimic.net.OnConnectedListener;
 import org.spacebison.multimic.net.Protocol;
 import org.spacebison.multimic.net.Server;
 import org.spacebison.multimic.net.discovery.MulticastServiceProvider;
+import org.spacebison.multimic.net.discovery.OnRequestReceivedListener;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,6 +38,10 @@ public class MediaReceiverServer {
 
     public void setOnConnectedListener(OnConnectedListener onConnectedListener) {
         mServer.setOnConnectedListener(onConnectedListener);
+    }
+
+    public void setOnRequestReceivedListener(OnRequestReceivedListener onRequestReceivedListener) {
+        mServiceProvider.setOnRequestReceivedListener(onRequestReceivedListener);
     }
 
     private class ClientConnectionSession extends Thread {

@@ -28,26 +28,41 @@ public class LogView extends TextView {
         super(context, attrs, defStyleAttr);
     }
 
-    public void d(String tag, String msg) {
+    public void d(String tag, final String msg) {
         Log.d(tag, msg);
-        setText(getText().toString() + '\n' + msg);
+        post(new Runnable() {
+            @Override
+            public void run() {
+                setText(getText().toString() + '\n' + msg);
+            }
+        });
     }
 
-    public void w(String tag, String msg) {
+    public void w(String tag, final String msg) {
         Log.w(tag, msg);
-        CharSequence prevText = getText();
-        SpannableStringBuilder ssb = new SpannableStringBuilder(prevText);
-        ssb.append(msg);
-        ssb.setSpan(blueText, prevText.length(), prevText.length() + msg.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        setText(ssb);
+        post(new Runnable() {
+            @Override
+            public void run() {
+                CharSequence prevText = getText();
+                SpannableStringBuilder ssb = new SpannableStringBuilder(prevText);
+                ssb.append(msg);
+                ssb.setSpan(blueText, prevText.length(), prevText.length() + msg.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                setText(ssb);
+            }
+        });
     }
 
-    public void e(String tag, String msg) {
+    public void e(String tag, final String msg) {
         Log.w(tag, msg);
-        CharSequence prevText = getText();
-        SpannableStringBuilder ssb = new SpannableStringBuilder(prevText);
-        ssb.append(msg);
-        ssb.setSpan(redText, prevText.length(), prevText.length() + msg.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        setText(ssb);
+        post(new Runnable() {
+            @Override
+            public void run() {
+                CharSequence prevText = getText();
+                SpannableStringBuilder ssb = new SpannableStringBuilder(prevText);
+                ssb.append(msg);
+                ssb.setSpan(redText, prevText.length(), prevText.length() + msg.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                setText(ssb);
+            }
+        });
     }
 }
