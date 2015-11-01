@@ -2,19 +2,10 @@ package org.spacebison.multimic;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.os.AsyncTask;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-
-import org.spacebison.multimic.net.Client;
-import org.spacebison.multimic.net.Server;
-import org.spacebison.multimic.net.discovery.MulticastServiceProvider;
-
-import java.io.IOException;
-import java.net.InetAddress;
 
 public class MainActivity extends Activity {
     @Override
@@ -26,6 +17,7 @@ public class MainActivity extends Activity {
 
         final Button serverButton = new Button(this);
         final Button clientButton = new Button(this);
+        final Button logButton = new Button(this);
 
         serverButton.setText("server");
         serverButton.setOnClickListener(new View.OnClickListener() {
@@ -45,5 +37,14 @@ public class MainActivity extends Activity {
             }
         });
         root.addView(clientButton);
+
+        logButton.setText("Log");
+        logButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(new Intent(MainActivity.this, LogActivity.class));
+            }
+        });
+        root.addView(logButton);
     }
 }

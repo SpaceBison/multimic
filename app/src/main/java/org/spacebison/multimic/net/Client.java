@@ -20,9 +20,9 @@ public class Client {
     private int mServerPort;
     private final ClientThread mClientThread = new ClientThread();
     private SendThread mSendThread;
-    private InputStream mInputStream;
     private OnConnectedListener mOnConnectedListener;
     private OnConnectionErrorListener mErrorListener;
+    private OnCommandListener mOnCommandListener;
 
     public Client(InetAddress address, int port) {
         mServerAddress = address;
@@ -41,6 +41,23 @@ public class Client {
         mClientThread.start();
     }
 
+    public void startSending(InputStream inputStream) {
+        Log.d(TAG, "Start sending");
+        if (mSendThread == null || mSendThread.isAlive()) {
+            return;
+        }
+
+        mSendThread = new SendThread(inputStream);
+        mSendThread.start();
+    }
+
+    public void stopSending() {
+        Log.d(TAG, "Stop sending");
+        if (mSendThread != null) {
+            mSendThread.interrupt();
+        }
+    }
+
     public void disconnect() {
         mClientThread.interrupt();
         try {
@@ -49,8 +66,8 @@ public class Client {
         }
     }
 
-    public void setInputStream(InputStream inputStream) {
-        mInputStream = inputStream;
+    public void setOnCommandListener(OnCommandListener onCommandListener) {
+        mOnCommandListener = onCommandListener;
     }
 
     private class ClientThread extends Thread {
@@ -82,14 +99,11 @@ public class Client {
                 input = mSocket.getInputStream();
                 while (!isInterrupted()) {
                     byte b = (byte) input.read();
-                    switch(b) {
-                        case Protocol.START_RECORD:
-                            mSendThread = new SendThread();
-                            mSendThread.start();
-                            break;
+                    Log.d(TAG, "Got command: " + Integer.toHexString(b));
+                    if (mOnCommandListener != null) {
+                        mOnCommandListener.onCommand(b);
                     }
                 }
-
             } catch (IOException e) {
                 Log.e(TAG, "Error receving command: " + e);
             } finally {
@@ -100,12 +114,20 @@ public class Client {
                     }
                 }
             }
+            Log.d(TAG, "Ending");
         }
     }
 
     private class SendThread extends Thread {
+        InputStream mInputStream;
+
+        public SendThread(InputStream inputStream) {
+            mInputStream = inputStream;
+        }
+
         @Override
         public void run() {
+            Log.d(TAG, "Starting send thread");
             byte[] buf = new byte[BUFFER_SIZE];
             OutputStream output = null;
             try {
@@ -123,6 +145,7 @@ public class Client {
                     }
                 }
             }
+            Log.d(TAG, "Finished sending");
         }
     }
 }

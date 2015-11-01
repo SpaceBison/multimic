@@ -6,6 +6,12 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Start server"
+        android:onClick="clickStartServer"/>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
@@ -26,15 +32,10 @@
 
     </LinearLayout>
 
-    <ScrollView
+    <Button
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <org.spacebison.multimic.LogView
-            android:id="@+id/log"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-
-    </ScrollView>
+        android:layout_height="wrap_content"
+        android:text="Logs"
+        android:onClick="clickLogs"/>
 
 </LinearLayout>

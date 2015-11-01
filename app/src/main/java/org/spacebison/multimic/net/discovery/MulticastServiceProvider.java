@@ -13,7 +13,7 @@ import java.net.MulticastSocket;
  */
 public class MulticastServiceProvider {
     private static final String TAG = "cmb.MutlicastSP";
-    private BroadcastListenerThread mThread = new BroadcastListenerThread();
+    private BroadcastListenerThread mThread;
     private String mAddress;
     private int mServicePort;
     private int mPort;
@@ -26,11 +26,23 @@ public class MulticastServiceProvider {
     }
 
     public void start() {
+        if (mThread != null) {
+            if (mThread.isAlive()) {
+                return;
+            } else {
+                mThread = new BroadcastListenerThread();
+            }
+        } else {
+            mThread = new BroadcastListenerThread();
+        }
+
         mThread.start();
     }
 
     public void stop() {
-        mThread.interrupt();
+        if (mThread != null) {
+            mThread.interrupt();
+        }
     }
 
     public void setOnRequestReceivedListener(OnRequestReceivedListener onRequestReceivedListener) {
@@ -67,15 +79,19 @@ public class MulticastServiceProvider {
                         mOnRequestReceivedListener.onRequestReceived(packet);
                     }
 
+                    sleep(500);
+
                     DatagramSocket clientSocket = new DatagramSocket();
                     clientSocket.connect(packet.getAddress(), packet.getPort());
                     DiscoveryResponse discoveryResponse = new DiscoveryResponse(socket.getNetworkInterface().getInetAddresses().nextElement(), mServicePort);
-                    Log.d(TAG, "Sending response: " + discoveryResponse);
+                    Log.d(TAG, "Sending response: " + discoveryResponse + " to " + packet.getAddress() + ':' + packet.getPort());
                     byte[] responseBytes = discoveryResponse.getBytes();
                     clientSocket.send(new DatagramPacket(responseBytes, responseBytes.length));
                     clientSocket.close();
                 } catch (IOException e) {
                     Log.w(TAG, e.toString());
+                } catch (InterruptedException e) {
+                    Log.w(TAG, "Interrupted");
                 }
                 yield();
             }

@@ -1,10 +1,11 @@
 package org.spacebison.multimic;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
-import org.spacebison.multimic.audio.MediaReceiverServer;
 import org.spacebison.multimic.net.OnConnectedListener;
 import org.spacebison.multimic.net.discovery.OnRequestReceivedListener;
 
@@ -18,34 +19,38 @@ public class ServerActivity extends Activity implements OnConnectedListener, OnR
     private static final String TAG = "cmb.ServerActivity";
     private MediaReceiverServer mServer = new MediaReceiverServer();
 
-    private LogView mLog;
-
     public void clickStart(View view) {
-        mLog.d(TAG, "Starting server");
-        mServer.start();
+        mServer.startReceiving();
     }
 
     public void clickStop(View view) {
-        mLog.d(TAG, "Stopping server");
-        mServer.stop();
+        mServer.stopReceiving();
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_server);
-        mLog = (LogView) findViewById(R.id.log);
 
         mServer.setOnConnectedListener(this);
     }
 
     @Override
     public void onConnected(Socket socket) {
-        mLog.d(TAG, "Client connected: " + socket.getInetAddress());
+        Log.d(TAG, "Client connected: " + socket.getInetAddress());
     }
 
     @Override
     public void onRequestReceived(DatagramPacket packet) {
-        mLog.d(TAG, "Received request from: " + packet.getAddress());
+        Log.d(TAG, "Received request from: " + packet.getAddress());
+    }
+
+    public void clickStartServer(View view) {
+        Log.d(TAG, "Starting server");
+        mServer.start();
+    }
+
+    public void clickLogs(View view) {
+        startActivity(new Intent(this, LogActivity.class));
     }
 }

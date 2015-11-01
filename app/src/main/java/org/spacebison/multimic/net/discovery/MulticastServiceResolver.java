@@ -30,30 +30,30 @@ public class MulticastServiceResolver {
             public void run() {
                 Log.d(TAG, "Starting thread: " + getName());
                 DatagramSocket socket = null;
-                DatagramPacket packet = null;
                 Log.d(TAG, "Sending request to " + mMulticastAddress + ':' + mMulticastPort);
                 try {
                     socket = new DatagramSocket();
                     socket.connect(InetAddress.getByName(mMulticastAddress), mMulticastPort);
-                    packet = new DatagramPacket(new byte[DiscoveryResponse.maxByteCount()], DiscoveryResponse.maxByteCount());
+
                     socket.send(new DatagramPacket(new byte[1], 1));
                     InetAddress address = socket.getLocalAddress();
                     int port = socket.getLocalPort();
                     socket.close();
                     socket = new DatagramSocket(port, address);
                     socket.setSoTimeout(timeout);
+                    Log.d(TAG, "Listening for response on " + address + ':' + port);
                 } catch (IOException e) {
                     e.printStackTrace();
                     return;
                 }
 
-
                 while (System.currentTimeMillis() - startTime < timeout) {
                     try {
+                        DatagramPacket packet = new DatagramPacket(new byte[DiscoveryResponse.maxByteCount()], DiscoveryResponse.maxByteCount());
                         socket.receive(packet);
                         Log.d(TAG, "Received response from: " + packet.getAddress());
                         DiscoveryResponse response = DiscoveryResponse.fromBytes(packet.getData());
-                        mListener.onServiceResolved(response.getAddress(), response.getPort());
+                        mListener.onServiceResolved(packet.getAddress(), response.getPort());
                     } catch (IOException e) {
                         Log.w(TAG, e.toString());
                     }
