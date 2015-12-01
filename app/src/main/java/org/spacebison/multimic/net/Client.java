@@ -2,19 +2,23 @@ package org.spacebison.multimic.net;
 
 import android.util.Log;
 
+import org.spacebison.multimic.Util;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by cmb on 24.10.15.
  */
 public class Client {
     private static final String TAG = "cmb.Client";
-    private static final int BUFFER_SIZE = 1024;
+    private static final int BUFFER_SIZE = 10240;
     private final Socket mSocket = new Socket();
     private InetAddress mServerAddress;
     private int mServerPort;
@@ -23,6 +27,9 @@ public class Client {
     private OnConnectedListener mOnConnectedListener;
     private OnConnectionErrorListener mErrorListener;
     private OnCommandListener mOnCommandListener;
+    private OnBytesTransferredListener mOnBytesTransferredListener;
+    private ExecutorService mUncertainExecutor = Util.newMostCurrentTaskExecutor();
+    private ExecutorService mExecutor = Executors.newCachedThreadPool();
 
     public Client(InetAddress address, int port) {
         mServerAddress = address;
@@ -41,9 +48,17 @@ public class Client {
         mClientThread.start();
     }
 
+    public Socket getSocket() {
+        return mSocket;
+    }
+
+    public int getBufferSize() {
+        return BUFFER_SIZE;
+    }
+
     public void startSending(InputStream inputStream) {
         Log.d(TAG, "Start sending");
-        if (mSendThread == null || mSendThread.isAlive()) {
+        if (mSendThread != null && mSendThread.isAlive()) {
             return;
         }
 
@@ -70,9 +85,15 @@ public class Client {
         mOnCommandListener = onCommandListener;
     }
 
+    public void setOnBytesTransferredListener(OnBytesTransferredListener onBytesTransferredListener) {
+        mOnBytesTransferredListener = onBytesTransferredListener;
+    }
+
     private class ClientThread extends Thread {
+        private static final String TAG = "cmb.ClientThread";
+
         public ClientThread() {
-            super(TAG + "Thread");
+            super(TAG);
         }
 
         @Override
@@ -82,17 +103,13 @@ public class Client {
                 mSocket.connect(new InetSocketAddress(mServerAddress, mServerPort));
             } catch (IOException e) {
                 Log.e(TAG, "Error connecting to " + mServerAddress + ':' + mServerPort + ": " + e);
-                if (mErrorListener != null) {
-                    mErrorListener.onConnectionError(e);
-                }
+                onConnectionError(e);
                 return;
             }
 
             Log.d(TAG, "Connected: " + mSocket.getInetAddress());
 
-            if (mOnConnectedListener != null) {
-                mOnConnectedListener.onConnected(mSocket);
-            }
+            onConnected();
 
             InputStream input = null;
             try {
@@ -100,9 +117,7 @@ public class Client {
                 while (!isInterrupted()) {
                     byte b = (byte) input.read();
                     Log.d(TAG, "Got command: " + Integer.toHexString(b));
-                    if (mOnCommandListener != null) {
-                        mOnCommandListener.onCommand(b);
-                    }
+                    onCommand(b);
                 }
             } catch (IOException e) {
                 Log.e(TAG, "Error receving command: " + e);
@@ -118,10 +133,45 @@ public class Client {
         }
     }
 
+    private void onConnected() {
+        if (mOnConnectedListener != null) {
+            mExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    mOnConnectedListener.onConnected(mSocket);
+                }
+            });
+        }
+    }
+
+    private void onCommand(final byte b) {
+        if (mOnCommandListener != null) {
+            mExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    mOnCommandListener.onCommand(b);
+                }
+            });
+        }
+    }
+
+    private void onBytesTransferred(final int bytes) {
+        if (mOnBytesTransferredListener != null) {
+            mExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    mOnBytesTransferredListener.onBytesTransferred(bytes);
+                }
+            });
+        }
+    }
+
     private class SendThread extends Thread {
+        private static final String TAG = "cmb.ClientSendThread";
         InputStream mInputStream;
 
         public SendThread(InputStream inputStream) {
+            super(TAG);
             mInputStream = inputStream;
         }
 
@@ -130,13 +180,29 @@ public class Client {
             Log.d(TAG, "Starting send thread");
             byte[] buf = new byte[BUFFER_SIZE];
             OutputStream output = null;
+
+            try {
+                sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
             try {
                 output = mSocket.getOutputStream();
-                while (mInputStream.read(buf) >= 0) {
-                    output.write(buf);
+                int byteSum = 0;
+                int bytesRead = 0;
+                while ((bytesRead = mInputStream.read(buf)) >= 0 || !isInterrupted()) {
+                    if (bytesRead > 0) {
+                        output.write(buf, 0, bytesRead);
+                        byteSum += bytesRead;
+                        onBytesTransferred(byteSum);
+                    }
+
                 }
+                output.flush();
             } catch (IOException e) {
                 Log.e(TAG, "Error sending: " + e);
+                onConnectionError(e);
             } finally {
                 if (output != null) {
                     try {
@@ -147,5 +213,29 @@ public class Client {
             }
             Log.d(TAG, "Finished sending");
         }
+    }
+
+    private void onConnectionError(final IOException e) {
+        if (mErrorListener != null) {
+            mExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    mErrorListener.onConnectionError(mSocket, e);
+                }
+            });
+        }
+    }
+
+    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+
+    public static String bytesToHex(byte[] bytes, final int offset, final int count) {
+        char[] hexChars = new char[count * 2];
+        final int end = offset + count;
+        for (int j = offset; j < end; j++) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        return new String(hexChars);
     }
 }

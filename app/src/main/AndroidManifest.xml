@@ -23,23 +23,20 @@
         </activity>
         <activity
             android:name=".ServerSearchActivity"
-            android:label="@string/title_activity_server_search"
-            android:theme="@style/AppTheme.NoActionBar" >
-        </activity>
+            android:label="@string/title_activity_server_search"/>
         <activity
             android:name=".ServerActivity"
-            android:label="Server"
-            android:theme="@style/AppTheme.NoActionBar" >
-        </activity>
+            android:label="Server"/>
         <activity
             android:name=".AudioRecordActivity"
-            android:label="Audio Record"
-            android:theme="@style/AppTheme.NoActionBar" >
-        </activity>
+            android:label="Audio Record"/>
+        <activity
+            android:name=".ClientListActivity"
+            android:label="Client list"/>
         <activity
             android:name=".LogActivity"
-            android:label="Log">
-        </activity>
+            android:label="Log"/>
+
     </application>
 
 </manifest>

@@ -2,6 +2,8 @@ package org.spacebison.multimic.net.discovery;
 
 import android.util.Log;
 
+import org.spacebison.multimic.net.OnConnectionErrorListener;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -16,6 +18,7 @@ public class MulticastServiceResolver {
     private String mMulticastAddress;
     private int mMulticastPort;
     private OnServiceResolvedListener mListener;
+    private OnConnectionErrorListener mOnConnectionErrorListener;
 
     public MulticastServiceResolver(String multicastAddress, int multicastPort, OnServiceResolvedListener listener) {
         mMulticastAddress = multicastAddress;
@@ -44,6 +47,9 @@ public class MulticastServiceResolver {
                     Log.d(TAG, "Listening for response on " + address + ':' + port);
                 } catch (IOException e) {
                     e.printStackTrace();
+                    if (mOnConnectionErrorListener != null) {
+                        mOnConnectionErrorListener.onConnectionError(null, e);
+                    }
                     return;
                 }
 
@@ -56,6 +62,9 @@ public class MulticastServiceResolver {
                         mListener.onServiceResolved(packet.getAddress(), response.getPort());
                     } catch (IOException e) {
                         Log.w(TAG, e.toString());
+                        if (mOnConnectionErrorListener != null) {
+                            mOnConnectionErrorListener.onConnectionError(null, e);
+                        }
                     }
                     yield();
                 }
@@ -63,5 +72,9 @@ public class MulticastServiceResolver {
                 socket.close();
             }
         }.start();
+    }
+
+    public void setOnConnectionErrorListener(OnConnectionErrorListener onConnectionErrorListener) {
+        mOnConnectionErrorListener = onConnectionErrorListener;
     }
 }
