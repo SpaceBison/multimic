@@ -37,7 +37,7 @@ import java.util.concurrent.Executors;
 public class MediaReceiverServer {
     private static final String TAG = "cmb.MediaReceiver";
     private static final int BUFFER_SIZE = 10240;
-    public static final int BUFFER_SIZE_IN_BYTES = 2 * AudioRecord.getMinBufferSize(44100, 1, AudioFormat.ENCODING_PCM_16BIT);
+    public static final int BUFFER_SIZE_IN_BYTES = 16 * AudioRecord.getMinBufferSize(44100, 1, AudioFormat.ENCODING_PCM_16BIT);
 
     private static MediaReceiverServer sInstance;
     private static final Object LOCK = new Object();
@@ -57,7 +57,7 @@ public class MediaReceiverServer {
     private OnSocketBytesTransferredListener mOnSocketBytesTransferredListener;
     private ExecutorService mExecutor = Executors.newCachedThreadPool();
     private ExecutorService mUncertainExecutor = Util.newMostCurrentTaskExecutor();
-    private AudioRecord mAudioRecord;
+    //private AudioRecord mAudioRecord;
     private AudioRecordSession mAudioRecordSession;
 
     public static MediaReceiverServer getInstance() {
@@ -175,31 +175,18 @@ public class MediaReceiverServer {
         Log.d(TAG, "Start receiving");
         File sdCard = Environment.getExternalStorageDirectory();
         String dirPath = sdCard.getAbsolutePath() + "/multimic";
-        int i = 1;
         final long now = System.currentTimeMillis();
 
-        mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC,
-                44100,
-                1,
-                AudioFormat.ENCODING_PCM_16BIT,
-                BUFFER_SIZE_IN_BYTES);
-
-        final File localFile = new File(dirPath + "/rec_" + now + "_0.3gp");
-
-        mAudioRecordSession = new AudioRecordSession(mAudioRecord, localFile, new OnRecordingEndedListener() {
-            @Override
-            public void onRecordingEnded() {
-                WavFileEncoder.getInstance().encode(localFile);
-            }
-        });
+        final File localFile = new File(dirPath + "/rec_" + now + "_0.raw");
 
         Log.d(TAG, "Dir: " + dirPath);
         Log.d(TAG, "Preparing to start " + mClients.size() + " sessions");
         File file = null;
+        int i = 1;
         for (Socket s : mClients) {
             OutputStream os = null;
             try {
-                String fileName = "/rec_" + now + '_' + i++ + ".3gp";
+                String fileName = "/rec_" + now + '_' + i++ + ".raw";
                 file = new File(dirPath);
                 file.mkdirs();
 
@@ -226,19 +213,22 @@ public class MediaReceiverServer {
             session.start();
         }
 
+        mAudioRecordSession = new AudioRecordSession(localFile, new OnRecordingEndedListener() {
+            @Override
+            public void onRecordingEnded() {
+                WavFileEncoder.getInstance().encode(localFile);
+            }
+        });
         mAudioRecordSession.start();
     }
 
     public void stopReceiving() {
         Log.d(TAG, "Stop receiving");
-        mAudioRecord.stop();
         mAudioRecordSession.interrupt();
         for (ClientConnectionSession s : mSessions.values()) {
             s.end();
         }
         mSessions.clear();
-
-        mAudioRecord = null;
         mAudioRecordSession = null;
     }
 
@@ -282,12 +272,10 @@ public class MediaReceiverServer {
 
     private class AudioRecordSession extends Thread {
         private static final String TAG = "cmb.AudioRecordSession";
-        private AudioRecord mAudioRecord;
         private File mFile;
         private OnRecordingEndedListener mListener;
 
-        public AudioRecordSession(AudioRecord audioRecord, File file, OnRecordingEndedListener listener) {
-            mAudioRecord = audioRecord;
+        public AudioRecordSession(File file, OnRecordingEndedListener listener) {
             mFile = file;
             mListener = listener;
         }
@@ -295,20 +283,46 @@ public class MediaReceiverServer {
         @Override
         public void run() {
             Log.d(TAG, "Starting local record session");
+            AudioRecord audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC,
+                    44100,
+                    1,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    BUFFER_SIZE_IN_BYTES);
+
+            if (audioRecord.getState() == AudioRecord.STATE_UNINITIALIZED) {
+                Log.e(TAG, "Error initializing audioRecord");
+                audioRecord.release();
+                return;
+            }
+            Log.d(TAG, "Audio record buffer: " + BUFFER_SIZE_IN_BYTES);
+
             try {
                 FileOutputStream out = new FileOutputStream(mFile);
                 byte[] buf = new byte[BUFFER_SIZE_IN_BYTES];
                 int bytesRead = 0;
-                mAudioRecord.startRecording();
-                while (!isInterrupted() || (bytesRead = mAudioRecord.read(buf, 0, buf.length)) > 0) {
+                audioRecord.startRecording();
+                while (!isInterrupted()) {
+                    bytesRead = audioRecord.read(buf, 0, buf.length);
                     out.write(buf, 0, bytesRead);
                 }
+
+                audioRecord.stop();
+                Log.d(TAG, "Flushing audio buffer to file");
+
+                while((bytesRead = audioRecord.read(buf, 0, buf.length)) > 0) {
+                    out.write(buf, 0, bytesRead);
+                }
+
+                out.close();
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             } catch (IOException e) {
-                mAudioRecord.stop();
                 e.printStackTrace();
             }
+
+            Log.d(TAG, "Releasing");
+
+            audioRecord.release();
 
             Log.d(TAG, "Finished recording");
 

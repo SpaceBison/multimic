@@ -1,6 +1,7 @@
 package org.spacebison.multimic.io;
 
 import android.media.AudioRecord;
+import android.support.annotation.NonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,7 +24,7 @@ public class AudioRecordInputStream extends InputStream {
     }
 
     @Override
-    public int read(byte[] buffer, int byteOffset, int byteCount) throws IOException {
+    public int read(@NonNull byte[] buffer, int byteOffset, int byteCount) throws IOException {
         return mAudioRecord.read(buffer, byteOffset, byteCount);
     }
 

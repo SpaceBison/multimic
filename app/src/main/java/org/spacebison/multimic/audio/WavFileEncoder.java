@@ -63,6 +63,10 @@ public class WavFileEncoder {
             }
 
             Log.i(TAG, "Encoded file " + wavFile.getAbsolutePath());
+
+            boolean deleted = mRawFile.delete();
+
+            Log.i(TAG, "Deleted raw file " + mRawFile.getName() + ": " + (deleted ? "Success" : "Failure"));
         }
     }
 }
