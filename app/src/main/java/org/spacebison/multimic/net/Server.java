@@ -15,7 +15,7 @@ import java.util.concurrent.Executors;
 public class Server {
     private static final String TAG = "cmb.Server";
     private static final int DEFAULT_THREAD_COUNT = 4;
-    private final AcceptThread mAcceptThread = new AcceptThread();
+    private AcceptThread mAcceptThread;
     private final LinkedList<Socket> mClientSockets = new LinkedList<>();
     private ExecutorService mExecutor = Executors.newCachedThreadPool();
     private int mPort;
@@ -28,11 +28,15 @@ public class Server {
     }
 
     public void start() {
+        if (mAcceptThread == null) {
+            mAcceptThread = new AcceptThread();
+        }
         mAcceptThread.start();
     }
 
     public void disconnect() {
         mAcceptThread.interrupt();
+        mAcceptThread = null;
         synchronized (mClientSockets) {
             for (final Socket s : mClientSockets) {
                 try {

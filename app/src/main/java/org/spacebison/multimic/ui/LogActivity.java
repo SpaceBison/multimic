@@ -1,4 +1,4 @@
-package org.spacebison.multimic;
+package org.spacebison.multimic.ui;
 
 import android.app.Activity;
 import android.graphics.Color;
@@ -8,6 +8,8 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import android.widget.TextView;
+
+import org.spacebison.multimic.R;
 
 import java.io.BufferedReader;
 import java.io.IOException;

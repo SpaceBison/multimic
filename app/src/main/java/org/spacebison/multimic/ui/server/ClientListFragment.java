@@ -1,10 +1,16 @@
-package org.spacebison.multimic;
+package org.spacebison.multimic.ui.server;
 
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
+import android.support.annotation.Nullable;
+import android.support.v4.app.Fragment;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
+import org.spacebison.multimic.MediaReceiverServer;
+import org.spacebison.multimic.R;
 import org.spacebison.multimic.net.OnConnectedListener;
 
 import java.net.InetAddress;
@@ -13,23 +19,25 @@ import java.net.Socket;
 /**
  * Created by cmb on 04.11.15.
  */
-public class ClientListActivity extends AppCompatActivity implements OnConnectedListener {
+public class ClientListFragment extends Fragment implements OnConnectedListener {
     ListView mListView;
     ArrayAdapter<InetAddress> mAdapter;
 
+    @Nullable
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_client_list);
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        View v = inflater.inflate(R.layout.fragment_client_list, container, false);
 
-        mListView = (ListView) findViewById(R.id.list);
-        mAdapter = new ArrayAdapter<InetAddress>(this, android.R.layout.simple_list_item_1);
+        mListView = (ListView) v.findViewById(R.id.list);
+        mAdapter = new ArrayAdapter<InetAddress>(getContext(), android.R.layout.simple_list_item_1);
         mAdapter.addAll(MediaReceiverServer.getInstance().getClientList());
         mListView.setAdapter(mAdapter);
+        return v;
     }
 
+
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
         MediaReceiverServer.getInstance().setOnConnectedListener(this);
         updateList();

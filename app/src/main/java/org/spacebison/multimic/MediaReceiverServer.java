@@ -37,7 +37,7 @@ import java.util.concurrent.Executors;
 public class MediaReceiverServer {
     private static final String TAG = "cmb.MediaReceiver";
     private static final int BUFFER_SIZE = 10240;
-    public static final int BUFFER_SIZE_IN_BYTES = 2 * AudioRecord.getMinBufferSize(4410, 1, AudioFormat.ENCODING_PCM_16BIT);
+    public static final int BUFFER_SIZE_IN_BYTES = 2 * AudioRecord.getMinBufferSize(44100, 1, AudioFormat.ENCODING_PCM_16BIT);
 
     private static MediaReceiverServer sInstance;
     private static final Object LOCK = new Object();

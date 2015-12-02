@@ -1,4 +1,4 @@
-package org.spacebison.multimic;
+package org.spacebison.multimic.ui;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -7,6 +7,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.util.AttributeSet;
 import android.view.View;
+
+import org.spacebison.multimic.R;
 
 /**
  * Created by cmb on 27.10.15.

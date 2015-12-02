@@ -14,7 +14,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme" >
-        <activity android:name=".MainActivity" >
+        <activity android:name=".ui.MainActivity" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -22,19 +22,19 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ServerSearchActivity"
+            android:name=".ui.ServerSearchActivity"
             android:label="@string/title_activity_server_search"/>
         <activity
-            android:name=".ServerActivity"
+            android:name=".ui.server.ServerActivity"
             android:label="Server"/>
         <activity
-            android:name=".AudioRecordActivity"
+            android:name=".ui.AudioRecordActivity"
             android:label="Audio Record"/>
         <activity
-            android:name=".ClientListActivity"
+            android:name=".ui.server.ClientListFragment"
             android:label="Client list"/>
         <activity
-            android:name=".LogActivity"
+            android:name=".ui.LogActivity"
             android:label="Log"/>
 
     </application>

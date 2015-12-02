@@ -1,9 +1,12 @@
-package org.spacebison.multimic;
+package org.spacebison.multimic.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+
+import org.spacebison.multimic.R;
+import org.spacebison.multimic.ui.server.ServerActivity;
 
 public class MainActivity extends AppCompatActivity {
     @Override

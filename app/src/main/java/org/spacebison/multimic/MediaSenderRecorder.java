@@ -5,6 +5,7 @@ import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.util.Log;
 
+import org.spacebison.multimic.io.AudioRecordInputStream;
 import org.spacebison.multimic.net.Client;
 import org.spacebison.multimic.net.OnCommandListener;
 import org.spacebison.multimic.net.Protocol;

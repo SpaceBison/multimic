@@ -1,14 +1,16 @@
-package org.spacebison.multimic;
+package org.spacebison.multimic.ui;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 
+import org.spacebison.multimic.R;
 import org.spacebison.multimic.net.Protocol;
 import org.spacebison.multimic.net.discovery.MulticastServiceResolver;
 import org.spacebison.multimic.net.discovery.OnServiceResolvedListener;
@@ -17,7 +19,7 @@ import java.net.InetAddress;
 import java.util.LinkedList;
 
 
-public class ServerSearchActivity extends Activity {
+public class ServerSearchActivity extends AppCompatActivity {
     private static final String TAG = "cmb.ServerSearch";
     private ArrayAdapter mArrayAdapter;
     private LinkedList<ServerAddress> mServerList = new LinkedList<>();
@@ -60,10 +62,23 @@ public class ServerSearchActivity extends Activity {
                 startActivity(intent);
             }
         });
-    }
 
-    public void clickSearch(View view) {
-        mServiceResolver.resolve(10000);
+        final Button searchButton = (Button) findViewById(R.id.searchButton);
+        searchButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mServiceResolver.resolve(10000);
+                searchButton.setEnabled(false);
+                searchButton.setText(R.string.searching);
+                searchButton.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        searchButton.setEnabled(true);
+                        searchButton.setText(R.string.search);
+                    }
+                }, 10000);
+            }
+        });
     }
 
     private class ServerAddress {

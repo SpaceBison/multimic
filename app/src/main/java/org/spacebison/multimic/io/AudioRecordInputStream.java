@@ -1,4 +1,4 @@
-package org.spacebison.multimic;
+package org.spacebison.multimic.io;
 
 import android.media.AudioRecord;
 
