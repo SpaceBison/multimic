@@ -25,6 +25,7 @@ public class Client {
     private final ClientThread mClientThread = new ClientThread();
     private SendThread mSendThread;
     private OnConnectedListener mOnConnectedListener;
+    private OnDisconnectedListener mOnDisconnectedListener;
     private OnConnectionErrorListener mErrorListener;
     private OnCommandListener mOnCommandListener;
     private OnBytesTransferredListener mOnBytesTransferredListener;
@@ -79,6 +80,8 @@ public class Client {
             mSocket.close();
         } catch (IOException ignored) {
         }
+
+        onDisconnected();
     }
 
     public void setOnCommandListener(OnCommandListener onCommandListener) {
@@ -87,6 +90,10 @@ public class Client {
 
     public void setOnBytesTransferredListener(OnBytesTransferredListener onBytesTransferredListener) {
         mOnBytesTransferredListener = onBytesTransferredListener;
+    }
+
+    public void setOnDisconnectedListener(OnDisconnectedListener onDisconnectedListener) {
+        mOnDisconnectedListener = onDisconnectedListener;
     }
 
     private class ClientThread extends Thread {
@@ -130,6 +137,17 @@ public class Client {
                 }
             }
             Log.d(TAG, "Ending");
+        }
+    }
+
+    private void onDisconnected() {
+        if (mOnDisconnectedListener != null) {
+            mExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    mOnDisconnectedListener.onDisconnected(mSocket);
+                }
+            });
         }
     }
 
@@ -203,13 +221,6 @@ public class Client {
             } catch (IOException e) {
                 Log.e(TAG, "Error sending: " + e);
                 onConnectionError(e);
-            } finally {
-                if (output != null) {
-                    try {
-                        output.close();
-                    } catch (IOException ignored) {
-                    }
-                }
             }
             Log.d(TAG, "Finished sending");
         }

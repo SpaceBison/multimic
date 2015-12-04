@@ -10,6 +10,10 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 
+import com.google.android.gms.analytics.HitBuilders;
+import com.google.android.gms.analytics.Tracker;
+
+import org.spacebison.multimic.MultimicApplication;
 import org.spacebison.multimic.R;
 import org.spacebison.multimic.net.Protocol;
 import org.spacebison.multimic.net.discovery.MulticastServiceResolver;
@@ -23,6 +27,7 @@ public class ServerSearchActivity extends AppCompatActivity {
     private static final String TAG = "cmb.ServerSearch";
     private ArrayAdapter mArrayAdapter;
     private LinkedList<ServerAddress> mServerList = new LinkedList<>();
+    private Tracker mTracker;
     private MulticastServiceResolver mServiceResolver =
             new MulticastServiceResolver(
                     Protocol.DISCOVERY_MULTICAST_GROUP,
@@ -50,7 +55,7 @@ public class ServerSearchActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_server_search);
         ListView serverListView = (ListView) findViewById(R.id.serverList);
-        mArrayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, mServerList);
+        mArrayAdapter = new ArrayAdapter<>(this, R.layout.list_item, mServerList);
         serverListView.setAdapter(mArrayAdapter);
         serverListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -79,6 +84,16 @@ public class ServerSearchActivity extends AppCompatActivity {
                 }, 10000);
             }
         });
+
+        MultimicApplication application = (MultimicApplication) getApplication();
+        mTracker = application.getDefaultTracker();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mTracker.setScreenName("Server Search");
+        mTracker.send(new HitBuilders.ScreenViewBuilder().build());
     }
 
     private class ServerAddress {

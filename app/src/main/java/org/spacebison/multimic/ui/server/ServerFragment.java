@@ -8,7 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 
-import org.spacebison.multimic.MediaReceiverServer;
+import org.spacebison.multimic.model.MediaReceiverServer;
 import org.spacebison.multimic.R;
 
 /**
@@ -37,10 +37,10 @@ public class ServerFragment extends Fragment {
 
     public void clickRecord() {
         if (mRecording) {
-            mServer.stopReceiving();
+            mServer.stopRecording();
             mRecordButton.setText(R.string.record);
         } else {
-            mServer.startReceiving();
+            mServer.startRecording();
             mRecordButton.setText(R.string.recording);
         }
         mRecording = !mRecording;

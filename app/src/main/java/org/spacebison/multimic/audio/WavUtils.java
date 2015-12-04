@@ -4,7 +4,6 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -23,8 +22,11 @@ public class WavUtils {
             int numSamples = (int) (rawPcmFile.length() / numChannels / bitsPerSample * 8);
             writeRiffHeader(output, numChannels, sampleRate, bitsPerSample, numSamples);
 
-            for (long i = 0; i < rawPcmFile.length(); ++i) {
-                output.write(input.read());
+            byte[] buf = new byte[1024];
+            int bytesRead = 0;
+
+            while ((bytesRead = input.read(buf)) > 0) {
+                output.write(buf, 0, bytesRead);
             }
         } catch (IOException e) {
             e.printStackTrace();

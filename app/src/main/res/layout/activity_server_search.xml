@@ -18,7 +18,6 @@
     <ListView
         android:id="@+id/serverList"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="#77ffffff"/>
+        android:layout_height="wrap_content"/>
 
 </LinearLayout>

@@ -1,4 +1,4 @@
-package org.spacebison.multimic;
+package org.spacebison.multimic.model;
 
 import android.media.AudioFormat;
 import android.media.AudioRecord;
@@ -6,6 +6,7 @@ import android.media.MediaRecorder;
 import android.os.Environment;
 import android.util.Log;
 
+import org.spacebison.multimic.Util;
 import org.spacebison.multimic.audio.WavFileEncoder;
 import org.spacebison.multimic.net.OnConnectedListener;
 import org.spacebison.multimic.net.OnConnectionErrorListener;
@@ -24,7 +25,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -54,11 +58,13 @@ public class MediaReceiverServer {
     private OnConnectedListener mOnConnectedListener;
     private OnConnectionErrorListener mOnConnectionErrorListener;
     private OnDisconnectedListener mOnDisconnectedListener;
+    private RecordListener mRecordListener;
     private OnSocketBytesTransferredListener mOnSocketBytesTransferredListener;
     private ExecutorService mExecutor = Executors.newCachedThreadPool();
     private ExecutorService mUncertainExecutor = Util.newMostCurrentTaskExecutor();
-    //private AudioRecord mAudioRecord;
     private AudioRecordSession mAudioRecordSession;
+
+    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
 
     public static MediaReceiverServer getInstance() {
         if (sInstance == null) {
@@ -148,6 +154,28 @@ public class MediaReceiverServer {
         }
     }
 
+    private void onRecordingStarted() {
+        if (mRecordListener != null ) {
+            mExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    mRecordListener.onRecordingStarted();
+                }
+            });
+        }
+    }
+
+    private void onRecordingFinished() {
+        if (mRecordListener != null ) {
+            mExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    mRecordListener.onRecordingFinished();
+                }
+            });
+        }
+    }
+
     public synchronized void start() {
         if (running) {
             return;
@@ -171,11 +199,11 @@ public class MediaReceiverServer {
         mServiceProvider.setOnRequestReceivedListener(onRequestReceivedListener);
     }
 
-    public void startReceiving() {
+    public void startRecording() {
         Log.d(TAG, "Start receiving");
         File sdCard = Environment.getExternalStorageDirectory();
         String dirPath = sdCard.getAbsolutePath() + "/multimic";
-        final long now = System.currentTimeMillis();
+        final String now = DATE_FORMAT.format(new Date(System.currentTimeMillis()));
 
         final File localFile = new File(dirPath + "/rec_" + now + "_0.raw");
 
@@ -220,9 +248,11 @@ public class MediaReceiverServer {
             }
         });
         mAudioRecordSession.start();
+
+        onRecordingStarted();
     }
 
-    public void stopReceiving() {
+    public void stopRecording() {
         Log.d(TAG, "Stop receiving");
         mAudioRecordSession.interrupt();
         for (ClientConnectionSession s : mSessions.values()) {
@@ -230,6 +260,7 @@ public class MediaReceiverServer {
         }
         mSessions.clear();
         mAudioRecordSession = null;
+        onRecordingFinished();
     }
 
     public List<InetAddress> getClientList() {
@@ -260,6 +291,10 @@ public class MediaReceiverServer {
 
     public void setOnSocketBytesTransferredListener(OnSocketBytesTransferredListener onSocketBytesTransferredListener) {
         mOnSocketBytesTransferredListener = onSocketBytesTransferredListener;
+    }
+
+    public void setRecordListener(RecordListener recordListener) {
+        mRecordListener = recordListener;
     }
 
     private interface OnSessionEndedListener {
@@ -365,36 +400,36 @@ public class MediaReceiverServer {
             InputStream input = null;
             try {
                 byte[] buf = new byte[BUFFER_SIZE];
-                input =  mSocket.getInputStream();
-
-                //while (input.read(buf) > 0);
+                input = mSocket.getInputStream();
 
                 mClientOutput.write(Protocol.START_RECORD);
                 mClientOutput.flush();
 
                 int byteSum = 0;
-                int bytesRead = 0;
+                int bytesRead = input.read(buf);
+
+                mOutput.write(buf, 0, bytesRead);
+                byteSum += bytesRead;
+                onSocketBytesTransferred(mSocket, byteSum);
+
+                mSocket.setSoTimeout(500);
+
                 while ((bytesRead = input.read(buf)) > 0) {
                     mOutput.write(buf, 0, bytesRead);
                     byteSum += bytesRead;
                     onSocketBytesTransferred(mSocket, byteSum);
                 }
                 mOutput.flush();
+            } catch (SocketTimeoutException e) {
+                Log.w(TAG, "Socket timeout: " + mSocket.getInetAddress());
             } catch (IOException e) {
                 Log.e(TAG, "Error receiving from " + mSocket.getInetAddress() + ": " + e);
                 mSessions.remove(mSocket);
             } finally {
-                if (input != null) {
-                    try {
-                        input.close();
-                    } catch (IOException ignored) {
-                    }
-
-                    try {
-                        mOutput.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                try {
+                    mOutput.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
             Log.d(TAG, "Finished session " + mSocket.getInetAddress());

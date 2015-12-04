@@ -9,7 +9,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
-import org.spacebison.multimic.MediaReceiverServer;
+import org.spacebison.multimic.model.MediaReceiverServer;
 import org.spacebison.multimic.R;
 import org.spacebison.multimic.net.OnConnectedListener;
 
@@ -20,8 +20,8 @@ import java.net.Socket;
  * Created by cmb on 04.11.15.
  */
 public class ClientListFragment extends Fragment implements OnConnectedListener {
-    ListView mListView;
-    ArrayAdapter<InetAddress> mAdapter;
+    private ListView mListView;
+    private ArrayAdapter<InetAddress> mAdapter;
 
     @Nullable
     @Override
@@ -29,7 +29,7 @@ public class ClientListFragment extends Fragment implements OnConnectedListener 
         View v = inflater.inflate(R.layout.fragment_client_list, container, false);
 
         mListView = (ListView) v.findViewById(R.id.list);
-        mAdapter = new ArrayAdapter<InetAddress>(getContext(), android.R.layout.simple_list_item_1);
+        mAdapter = new ArrayAdapter<InetAddress>(getContext(), R.layout.list_item);
         mAdapter.addAll(MediaReceiverServer.getInstance().getClientList());
         mListView.setAdapter(mAdapter);
         return v;
@@ -45,7 +45,14 @@ public class ClientListFragment extends Fragment implements OnConnectedListener 
 
     @Override
     public void onConnected(Socket socket) {
-        updateList();
+        if (isAdded()) {
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    updateList();
+                }
+            });
+        }
     }
 
     public void updateList() {
