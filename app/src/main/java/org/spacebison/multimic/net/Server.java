@@ -109,6 +109,8 @@ public class Server {
                 serverSocket.close();
             } catch (IOException ignored) {
             }
+
+            Log.d(TAG, "Closed");
         }
     }
 
