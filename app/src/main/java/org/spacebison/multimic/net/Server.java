@@ -35,7 +35,7 @@ public class Server {
     }
 
     public void disconnect() {
-        mAcceptThread.interrupt();
+        mAcceptThread.release();
         mAcceptThread = null;
         synchronized (mClientSockets) {
             for (final Socket s : mClientSockets) {
@@ -72,6 +72,9 @@ public class Server {
     }
 
     private class AcceptThread extends Thread {
+
+        private ServerSocket mServerSocket;
+
         public AcceptThread() {
             super(TAG + "AcceptThread");
         }
@@ -79,19 +82,18 @@ public class Server {
         @Override
         public void run() {
             Log.d(TAG, "Starting thread: " + getName());
-            final ServerSocket serverSocket;
             try {
-                serverSocket = new ServerSocket(mPort);
+                mServerSocket = new ServerSocket(mPort);
             } catch (IOException e) {
                 Log.e(TAG, "Error starting server: " + e.toString());
                 return;
             }
 
-            Log.d(TAG, "Listening: " + serverSocket);
+            Log.d(TAG, "Listening: " + mServerSocket);
 
             while (!isInterrupted()) {
                 try {
-                    final Socket socket = serverSocket.accept();
+                    final Socket socket = mServerSocket.accept();
 
                     Log.d(TAG, "Accepted: " + socket);
 
@@ -101,16 +103,19 @@ public class Server {
 
                     onConnected(socket);
                 } catch (final IOException e) {
-                    e.printStackTrace();
+                    Log.w(TAG, e.toString());
                 }
             }
 
+            Log.d(TAG, "Closed");
+        }
+
+        public void release() {
+            interrupt();
             try {
-                serverSocket.close();
+                mServerSocket.close();
             } catch (IOException ignored) {
             }
-
-            Log.d(TAG, "Closed");
         }
     }
 

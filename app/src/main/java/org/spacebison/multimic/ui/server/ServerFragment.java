@@ -15,6 +15,7 @@ import org.spacebison.multimic.R;
  * Created by cmb on 02.12.15.
  */
 public class ServerFragment extends Fragment {
+    private static final String STATE_RECORDING = "recording";
     private boolean mRecording = false;
     private MediaReceiverServer mServer = MediaReceiverServer.getInstance();
     private Button mRecordButton;
@@ -24,6 +25,10 @@ public class ServerFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_server, container, false);
 
+        if (savedInstanceState != null) {
+            mRecording = savedInstanceState.getBoolean(STATE_RECORDING);
+        }
+
         mRecordButton = (Button) v.findViewById(R.id.recordButton);
         mRecordButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -31,18 +36,29 @@ public class ServerFragment extends Fragment {
                 clickRecord();
             }
         });
+
+        setButtonText();
+
         return v;
     }
 
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(STATE_RECORDING, mRecording);
+    }
 
     public void clickRecord() {
         if (mRecording) {
             mServer.stopRecording();
-            mRecordButton.setText(R.string.record);
         } else {
             mServer.startRecording();
-            mRecordButton.setText(R.string.recording);
         }
         mRecording = !mRecording;
+        setButtonText();
+    }
+
+    private void setButtonText() {
+        mRecordButton.setText(mRecording ? R.string.recording : R.string.record);
     }
 }
