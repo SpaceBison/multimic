@@ -104,7 +104,7 @@ public class ServerActivity extends AppCompatActivity {
 
             @Override
             public void onRecordingFinished() {
-                long recordingLength = mRecordStartTime - System.currentTimeMillis();
+                long recordingLength = System.currentTimeMillis() - mRecordStartTime;
                 mTracker.send(
                         new HitBuilders.EventBuilder(
                                 Analytics.CATEGORY_RECORDING,

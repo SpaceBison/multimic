@@ -108,7 +108,7 @@ public class AudioRecordActivity extends Activity {
 
             @Override
             public void onRecordingFinished() {
-                long recordingLength = mRecordStartTime - System.currentTimeMillis();
+                long recordingLength = System.currentTimeMillis() - mRecordStartTime;
                 Log.i(TAG, "Finished recording: " + recordingLength + " ms");
                 mTracker.send(
                         new HitBuilders.EventBuilder(
@@ -147,7 +147,7 @@ public class AudioRecordActivity extends Activity {
     public void onBackPressed() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Exit?");
-        builder.setMessage("Exit the server?");
+        builder.setMessage("Disconnect from the server?");
         builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {

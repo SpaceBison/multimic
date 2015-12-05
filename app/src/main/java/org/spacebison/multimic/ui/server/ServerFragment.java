@@ -16,6 +16,7 @@ import org.spacebison.multimic.R;
  */
 public class ServerFragment extends Fragment {
     private static final String STATE_RECORDING = "recording";
+
     private boolean mRecording = false;
     private MediaReceiverServer mServer = MediaReceiverServer.getInstance();
     private Button mRecordButton;
