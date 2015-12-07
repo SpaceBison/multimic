@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 
+import com.google.android.gms.analytics.ExceptionReporter;
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
 
@@ -22,6 +23,13 @@ public class MainActivity extends AppCompatActivity {
 
         MultimicApplication application = (MultimicApplication) getApplication();
         mTracker = application.getDefaultTracker();
+
+        Thread.UncaughtExceptionHandler handler = new ExceptionReporter(
+                mTracker,                                        // Currently used Tracker.
+                Thread.getDefaultUncaughtExceptionHandler(),      // Current default uncaught exception handler.
+                this);                                         // Context of the application.
+
+        Thread.setDefaultUncaughtExceptionHandler(handler);
     }
 
     @Override

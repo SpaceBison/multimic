@@ -355,11 +355,7 @@ public class MediaReceiverServer {
                 e.printStackTrace();
             }
 
-            Log.d(TAG, "Releasing");
-
             audioRecord.release();
-
-            Log.d(TAG, "Finished recording");
 
             if (mListener != null) {
                 mListener.onRecordingEnded();

@@ -8,14 +8,15 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
 
 import org.spacebison.multimic.Analytics;
-import org.spacebison.multimic.model.MediaReceiverServer;
 import org.spacebison.multimic.MultimicApplication;
 import org.spacebison.multimic.R;
+import org.spacebison.multimic.model.MediaReceiverServer;
 import org.spacebison.multimic.model.RecordListener;
 import org.spacebison.multimic.net.OnConnectedListener;
 import org.spacebison.multimic.net.OnDisconnectedListener;
@@ -105,6 +106,7 @@ public class ServerActivity extends AppCompatActivity {
             @Override
             public void onRecordingFinished() {
                 long recordingLength = System.currentTimeMillis() - mRecordStartTime;
+                Log.d(TAG, "Finished recording; time: " + recordingLength);
                 mTracker.send(
                         new HitBuilders.EventBuilder(
                                 Analytics.CATEGORY_RECORDING,
