@@ -49,6 +49,8 @@ public class ServerActivity extends AppCompatActivity {
         mPages.add(clientListFragment);
 
         ViewPager pager = (ViewPager) findViewById(R.id.pager);
+        pager.setPageMargin(20);
+        pager.setPageMarginDrawable(R.color.black);
         pager.setAdapter(new PagerAdapter(getSupportFragmentManager()));
         pager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
             @Override

@@ -27,10 +27,10 @@
             android:label="@string/title_activity_server_search"/>
         <activity
             android:name=".ui.server.ServerActivity"
-            android:label="Server"/>
+            android:label="@string/title_activity_server"/>
         <activity
             android:name=".ui.AudioRecordActivity"
-            android:label="Audio Record"/>
+            android:label="@string/title_activity_client"/>
 
     </application>
 

@@ -5,10 +5,15 @@
                 android:layout_height="match_parent"
                 tools:context="org.spacebison.multimic.ui.server.ServerActivity">
 
-
     <android.support.v4.view.ViewPager
         android:id="@+id/pager"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/shadow"
+        android:scaleType="fitXY"/>
 
 </RelativeLayout>

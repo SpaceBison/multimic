@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:layout_width="match_parent"
     tools:context="org.spacebison.multimic.ui.ServerSearchActivity"
-    android:background="@drawable/bg_tile"
+    android:background="@drawable/bg"
     android:orientation="vertical">
 
 
