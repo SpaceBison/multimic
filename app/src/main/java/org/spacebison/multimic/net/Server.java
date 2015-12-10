@@ -2,6 +2,8 @@ package org.spacebison.multimic.net;
 
 import android.util.Log;
 
+import org.spacebison.multimic.MultimicApplication;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -17,7 +19,7 @@ public class Server {
     private static final int DEFAULT_THREAD_COUNT = 4;
     private AcceptThread mAcceptThread;
     private final LinkedList<Socket> mClientSockets = new LinkedList<>();
-    private ExecutorService mExecutor = Executors.newCachedThreadPool();
+    private ExecutorService mExecutor = Executors.newCachedThreadPool(MultimicApplication.getAnalyticsThreadFactory());
     private int mPort;
     private OnConnectedListener mOnConnectedListener;
     private OnDisconnectedListener mOnDisconnectedListener;

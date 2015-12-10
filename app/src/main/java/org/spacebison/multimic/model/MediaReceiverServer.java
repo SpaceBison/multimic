@@ -4,8 +4,10 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
+import org.spacebison.multimic.MultimicApplication;
 import org.spacebison.multimic.Util;
 import org.spacebison.multimic.audio.WavFileEncoder;
 import org.spacebison.multimic.net.OnConnectedListener;
@@ -60,8 +62,8 @@ public class MediaReceiverServer {
     private OnDisconnectedListener mOnDisconnectedListener;
     private RecordListener mRecordListener;
     private OnSocketBytesTransferredListener mOnSocketBytesTransferredListener;
-    private ExecutorService mExecutor = Executors.newCachedThreadPool();
-    private ExecutorService mUncertainExecutor = Util.newMostCurrentTaskExecutor();
+    private ExecutorService mExecutor = Executors.newCachedThreadPool(MultimicApplication.getAnalyticsThreadFactory());
+    private ExecutorService mUncertainExecutor = Util.newMostCurrentTaskExecutor(MultimicApplication.getAnalyticsThreadFactory());
     private AudioRecordSession mAudioRecordSession;
 
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
@@ -189,6 +191,7 @@ public class MediaReceiverServer {
         if (!running) {
             return;
         }
+        stopRecording();
         mServer.disconnect();
         mServiceProvider.stop();
         running = false;
@@ -201,8 +204,7 @@ public class MediaReceiverServer {
 
     public void startRecording() {
         Log.d(TAG, "Start receiving");
-        File sdCard = Environment.getExternalStorageDirectory();
-        String dirPath = sdCard.getAbsolutePath() + "/multimic";
+        String dirPath = getRecordingDirPath();
         final String now = DATE_FORMAT.format(new Date(System.currentTimeMillis()));
 
         final File localFile = new File(dirPath + "/rec_" + now + "_0.raw");
@@ -252,9 +254,17 @@ public class MediaReceiverServer {
         onRecordingStarted();
     }
 
+    @NonNull
+    public static String getRecordingDirPath() {
+        File sdCard = Environment.getExternalStorageDirectory();
+        return sdCard.getAbsolutePath() + "/multimic";
+    }
+
     public void stopRecording() {
         Log.d(TAG, "Stop receiving");
-        mAudioRecordSession.interrupt();
+        if (mAudioRecordSession != null) {
+            mAudioRecordSession.interrupt();
+        }
         for (ClientConnectionSession s : mSessions.values()) {
             s.end();
         }
@@ -283,10 +293,6 @@ public class MediaReceiverServer {
 
     public void setOnConnectedListener(OnConnectedListener onConnectedListener) {
         mOnConnectedListener = onConnectedListener;
-    }
-
-    public void setUncertainExecutor(ExecutorService uncertainExecutor) {
-        mUncertainExecutor = uncertainExecutor;
     }
 
     public void setOnSocketBytesTransferredListener(OnSocketBytesTransferredListener onSocketBytesTransferredListener) {

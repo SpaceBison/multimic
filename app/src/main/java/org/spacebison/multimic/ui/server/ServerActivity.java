@@ -39,8 +39,7 @@ public class ServerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_server);
 
-        MultimicApplication application = (MultimicApplication) getApplication();
-        mTracker = application.getDefaultTracker();
+        mTracker = MultimicApplication.getDefaultTracker();
 
         ServerFragment serverFragment = new ServerFragment();
         final ClientListFragment clientListFragment = new ClientListFragment();

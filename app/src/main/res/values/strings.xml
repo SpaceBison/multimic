@@ -10,4 +10,8 @@
     <string name="recording">RECORDING</string>
     <string name="title_activity_server">Server</string>
     <string name="title_activity_client">Client</string>
+    <string name="title_activity_player">Player</string>
+    <string name="player">Player</string>
+    <string name="tracks">Tracks</string>
+    <string name="title_activity_player_list">Session List</string>
 </resources>

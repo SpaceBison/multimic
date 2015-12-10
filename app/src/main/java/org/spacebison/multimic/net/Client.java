@@ -2,7 +2,7 @@ package org.spacebison.multimic.net;
 
 import android.util.Log;
 
-import org.spacebison.multimic.Util;
+import org.spacebison.multimic.MultimicApplication;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,8 +29,7 @@ public class Client {
     private OnConnectionErrorListener mErrorListener;
     private OnCommandListener mOnCommandListener;
     private OnBytesTransferredListener mOnBytesTransferredListener;
-    private ExecutorService mUncertainExecutor = Util.newMostCurrentTaskExecutor();
-    private ExecutorService mExecutor = Executors.newCachedThreadPool();
+    private ExecutorService mExecutor = Executors.newCachedThreadPool(MultimicApplication.getAnalyticsThreadFactory());
 
     public Client(InetAddress address, int port) {
         mServerAddress = address;

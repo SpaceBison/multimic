@@ -5,12 +5,12 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 
-import com.google.android.gms.analytics.ExceptionReporter;
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
 
 import org.spacebison.multimic.MultimicApplication;
 import org.spacebison.multimic.R;
+import org.spacebison.multimic.ui.player.PlayerListActivity;
 import org.spacebison.multimic.ui.server.ServerActivity;
 
 public class MainActivity extends AppCompatActivity {
@@ -20,16 +20,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        MultimicApplication application = (MultimicApplication) getApplication();
-        mTracker = application.getDefaultTracker();
-
-        Thread.UncaughtExceptionHandler handler = new ExceptionReporter(
-                mTracker,                                        // Currently used Tracker.
-                Thread.getDefaultUncaughtExceptionHandler(),      // Current default uncaught exception handler.
-                this);                                         // Context of the application.
-
-        Thread.setDefaultUncaughtExceptionHandler(handler);
+        mTracker = MultimicApplication.getDefaultTracker();
     }
 
     @Override
@@ -45,5 +36,9 @@ public class MainActivity extends AppCompatActivity {
 
     public void clickServer(View view) {
         startActivity(new Intent(MainActivity.this, ServerActivity.class));
+    }
+
+    public void clickPlayer(View view) {
+        startActivity(new Intent(MainActivity.this, PlayerListActivity.class));
     }
 }

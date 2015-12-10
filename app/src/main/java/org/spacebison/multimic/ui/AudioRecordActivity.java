@@ -44,8 +44,7 @@ public class AudioRecordActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_audio_record);
 
-        MultimicApplication application = (MultimicApplication) getApplication();
-        mTracker = application.getDefaultTracker();
+        mTracker = MultimicApplication.getDefaultTracker();
 
         mRefreshExecutor = new ScheduledThreadPoolExecutor(1);
         mRefreshExecutor.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);

@@ -85,8 +85,7 @@ public class ServerSearchActivity extends AppCompatActivity {
             }
         });
 
-        MultimicApplication application = (MultimicApplication) getApplication();
-        mTracker = application.getDefaultTracker();
+        mTracker = MultimicApplication.getDefaultTracker();
     }
 
     @Override

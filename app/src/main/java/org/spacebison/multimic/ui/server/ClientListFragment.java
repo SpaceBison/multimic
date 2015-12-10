@@ -29,7 +29,7 @@ public class ClientListFragment extends Fragment implements OnConnectedListener 
         View v = inflater.inflate(R.layout.fragment_client_list, container, false);
 
         mListView = (ListView) v.findViewById(R.id.list);
-        mAdapter = new ArrayAdapter<InetAddress>(getContext(), R.layout.list_item);
+        mAdapter = new ArrayAdapter<InetAddress>(getContext(), android.R.layout.simple_list_item_1);
         mAdapter.addAll(MediaReceiverServer.getInstance().getClientList());
         mListView.setAdapter(mAdapter);
         return v;
