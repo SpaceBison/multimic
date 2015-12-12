@@ -1,5 +1,9 @@
 package org.spacebison.multimic;
 
+import android.content.Context;
+import android.content.res.Resources;
+import android.util.TypedValue;
+
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
@@ -35,5 +39,12 @@ public class Util {
         }
 
         return element;
+    }
+
+    public static int getThemeColor(Context context, int attrId) {
+        TypedValue typedValue = new TypedValue();
+        Resources.Theme theme = context.getTheme();
+        theme.resolveAttribute(attrId, typedValue, true);
+        return typedValue.data;
     }
 }

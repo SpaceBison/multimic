@@ -19,13 +19,13 @@ import org.spacebison.multimic.net.Server;
 import org.spacebison.multimic.net.discovery.MulticastServiceProvider;
 import org.spacebison.multimic.net.discovery.OnRequestReceivedListener;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.text.SimpleDateFormat;
@@ -202,6 +202,47 @@ public class MediaReceiverServer {
         mServiceProvider.setOnRequestReceivedListener(onRequestReceivedListener);
     }
 
+    public void sendNtpRequest(final Socket socket) {
+        if (mSessions.containsKey(socket)) {
+            Log.w(TAG, "Cannot send NTP request during an active session! " + socket);
+            return;
+        }
+
+        Log.d(TAG, "Sending NTP request to " + socket.getInetAddress());
+        mExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    OutputStream os = socket.getOutputStream();
+                    DataInputStream dis = new DataInputStream(socket.getInputStream());
+                    long requestSent;
+                    long requestReceived;
+                    long responseSent;
+                    long responseReceived;
+
+                    os.write(Protocol.NTP_REQUEST);
+                    requestSent = System.currentTimeMillis();      // 1
+                    responseSent = dis.readLong();                 // 3
+                    requestReceived = dis.readLong();              // 2
+                    responseReceived = System.currentTimeMillis(); // 4
+
+                    long roundTripDelay = ((responseReceived - requestSent) - (responseSent - requestReceived));
+                    long timeOffset = ((requestReceived - requestSent) + (responseSent - requestReceived));
+
+                    Log.d(TAG, "Request sent:      " + requestSent);
+                    Log.d(TAG, "Request received:  " + requestReceived);
+                    Log.d(TAG, "Response sent:     " + responseSent);
+                    Log.d(TAG, "Response received: " + responseReceived);
+                    Log.d(TAG, "Round trip delay: " + roundTripDelay);
+                    Log.d(TAG, "Time offset:      " + timeOffset);
+                    Log.d(TAG, "Offset - delay:   " + (timeOffset - roundTripDelay));
+                } catch (IOException e) {
+                    Log.d(TAG, "Error completing NTP request: " + e);
+                }
+            }
+        });
+    }
+
     public void startRecording() {
         Log.d(TAG, "Start receiving");
         String dirPath = getRecordingDirPath();
@@ -273,14 +314,8 @@ public class MediaReceiverServer {
         onRecordingFinished();
     }
 
-    public List<InetAddress> getClientList() {
-        ArrayList<InetAddress> list = new ArrayList<>(mClients.size());
-
-        for(Socket c : mClients) {
-            list.add(c.getInetAddress());
-        }
-
-        return list;
+    public List<Socket> getClientList() {
+        return new ArrayList<>(mClients);
     }
 
     public void setOnConnectionErrorListener(OnConnectionErrorListener onConnectionErrorListener) {

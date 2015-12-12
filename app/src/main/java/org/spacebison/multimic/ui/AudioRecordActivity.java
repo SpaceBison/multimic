@@ -51,6 +51,46 @@ public class AudioRecordActivity extends Activity {
         mRefreshExecutor.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
 
         mTimeTextView = (TextView) findViewById(R.id.recordTime);
+        setRecordTimeText(0);
+
+        if (savedInstanceState == null) {
+            Bundle extras = getIntent().getExtras();
+            InetAddress address = (InetAddress) extras.getSerializable(EXTRA_SERVER_ADDRESS);
+            int port = extras.getInt(EXTRA_SERVER_PORT);
+            mMediaSenderRecorder.connect(address, port);
+        } else {
+            mRecordStartTime = savedInstanceState.getLong(STATE_RECORD_START_TIME, System.currentTimeMillis());
+            setRecordTimeText(System.currentTimeMillis() - mRecordStartTime);
+        }
+    }
+
+    public void setRecordTimeText(long recordTime) {
+        final int hours = (int) (recordTime / 3600000);
+        recordTime -= hours * 3600000;
+        final int minutes = (int) (recordTime / 60000);
+        recordTime -= minutes * 60000;
+        final int seconds = (int) (recordTime / 1000);
+        recordTime -= seconds * 1000;
+        final long millis = recordTime;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mTimeTextView.setText(String.format("%d:%02d:%02d:%03d", hours, minutes, seconds, millis));
+            }
+        });
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putLong(STATE_RECORD_START_TIME, mRecordStartTime);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mTracker.setScreenName("Client");
+        mTracker.send(new HitBuilders.ScreenViewBuilder().build());
 
         mMediaSenderRecorder.setOnConnectedListener(new OnConnectedListener() {
             @Override
@@ -88,19 +128,7 @@ public class AudioRecordActivity extends Activity {
                     @Override
                     public void run() {
                         long recordTime = System.currentTimeMillis() - mRecordStartTime;
-                        final int hours = (int) (recordTime / 3600000);
-                        recordTime -= hours * 3600000;
-                        final int minutes = (int) (recordTime / 60000);
-                        recordTime -= minutes * 60000;
-                        final int seconds = (int) (recordTime / 1000);
-                        recordTime -= seconds * 1000;
-                        final long millis = recordTime;
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                mTimeTextView.setText(String.format("%d:%2d:%2d:%3d", hours, minutes, seconds, millis));
-                            }
-                        });
+                        setRecordTimeText(recordTime);
                     }
                 }, 0, 20, TimeUnit.MILLISECONDS);
             }
@@ -116,30 +144,28 @@ public class AudioRecordActivity extends Activity {
                                 .setValue(recordingLength)
                                 .build());
                 mRefreshScheduledFuture.cancel(true);
+                mRefreshExecutor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        setRecordTimeText(0);
+                    }
+                });
             }
         });
+    }
 
-        if (savedInstanceState == null) {
-            Bundle extras = getIntent().getExtras();
-            InetAddress address = (InetAddress) extras.getSerializable(EXTRA_SERVER_ADDRESS);
-            int port = extras.getInt(EXTRA_SERVER_PORT);
-            mMediaSenderRecorder.connect(address, port);
-        } else {
-            mRecordStartTime = savedInstanceState.getLong(STATE_RECORD_START_TIME);
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mRefreshScheduledFuture != null) {
+            mRefreshScheduledFuture.cancel(true);
         }
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putLong(STATE_RECORD_START_TIME, mRecordStartTime);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        mTracker.setScreenName("Client");
-        mTracker.send(new HitBuilders.ScreenViewBuilder().build());
+        mRefreshExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                setRecordTimeText(0);
+            }
+        });
     }
 
     @Override

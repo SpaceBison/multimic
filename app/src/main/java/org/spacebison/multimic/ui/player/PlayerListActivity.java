@@ -1,10 +1,12 @@
 package org.spacebison.multimic.ui.player;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -23,7 +25,7 @@ public class PlayerListActivity extends AppCompatActivity {
     private SessionListAdapter mSessionListAdapter;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_player_list);
 
@@ -39,6 +41,15 @@ public class PlayerListActivity extends AppCompatActivity {
 
         ListView listView = (ListView) findViewById(R.id.sessionList);
         listView.setAdapter(mSessionListAdapter);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String sessionPrefix = (String) mSessionListAdapter.getItem(position);
+                Intent intent = new Intent(PlayerListActivity.this, PlayerActivity.class);
+                intent.putExtra(PlayerActivity.EXTRA_SESSION_PREFIX, sessionPrefix);
+                startActivity(intent);
+            }
+        });
     }
 
     private class SessionListAdapter extends BaseAdapter {

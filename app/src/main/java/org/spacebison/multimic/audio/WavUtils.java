@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
@@ -47,6 +48,11 @@ public class WavUtils {
         }
     }
 
+
+    public static void writeRiffHeader(OutputStream outputStream, WavHeader header) throws IOException {
+        writeRiffHeader(outputStream, header.numChannels, header.sampleRate, header.bitsPerSample, header.numSamples);
+    }
+
     public static void writeRiffHeader(OutputStream outputStream, short numChannels, int sampleRate, short bitsPerSample, int numSamples) throws IOException {
         int dataLength = numChannels*bitsPerSample/8 * numSamples;
         // RIFF
@@ -69,6 +75,22 @@ public class WavUtils {
         outputStream.write(toEndianSwappedByteArray(dataLength)); // SubChunk2Size
     }
 
+    public static WavHeader readRiffHeader(InputStream inputStream) throws IOException, WavHeaderException {
+        WavHeader header = new WavHeader();
+        byte[] shortArray = new byte[2];
+        byte[] intArray = new byte[4];
+        inputStream.read(intArray);
+        int chunkId = fromEndianSwappedByteArrayToInt(intArray);
+
+        if (chunkId != 0x46464952) {
+            throw new WavHeaderException("Invalid chunkId: " + Integer.toHexString(chunkId) + " (should be " + Integer.toHexString(0x46464952) + ')');
+        }
+
+        //TODO;
+
+        return header;
+    }
+
     private static byte[] toEndianSwappedByteArray(int integer) {
         byte[] array = new byte[4];
 
@@ -80,6 +102,17 @@ public class WavUtils {
         return array;
     }
 
+    private static int fromEndianSwappedByteArrayToInt(byte[] array) {
+        int integer = 0;
+
+        for (int i = 0; i < 4; ++i) {
+            integer |= array[3 - i];
+            integer <<= 8;
+        }
+
+        return integer;
+    }
+
     private static byte[] toEndianSwappedByteArray(short integer) {
         byte[] array = new byte[2];
 
@@ -89,5 +122,16 @@ public class WavUtils {
         }
 
         return array;
+    }
+
+    private static short fromEndianSwappedByteArrayToShort(byte[] array) {
+        short integer = 0;
+
+        for (int i = 0; i < 2; ++i) {
+            integer |= array[1 - i];
+            integer <<= 8;
+        }
+
+        return integer;
     }
 }

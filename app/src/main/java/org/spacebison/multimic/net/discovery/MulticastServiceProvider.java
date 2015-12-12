@@ -50,29 +50,36 @@ public class MulticastServiceProvider {
     }
 
     private class BroadcastListenerThread extends Thread {
+
+        private MulticastSocket mSocket;
+
         public BroadcastListenerThread() {
             super(TAG + "ListenerThread");
+        }
+
+        public void release() {
+            interrupt();
+            mSocket.close();
         }
 
         @Override
         public void run() {
             Log.d(TAG, "Starting thread " + getName());
 
-            MulticastSocket socket;
             try {
-                socket = new MulticastSocket(mPort);
-                socket.joinGroup(InetAddress.getByName(mAddress));
+                mSocket = new MulticastSocket(mPort);
+                mSocket.joinGroup(InetAddress.getByName(mAddress));
             } catch (IOException e) {
                 e.printStackTrace();
                 return;
             }
 
-            Log.d(TAG, "Listening: " + mAddress + ':' + socket.getLocalPort());
+            Log.d(TAG, "Listening: " + mAddress + ':' + mSocket.getLocalPort());
 
             while(!isInterrupted()) {
                 try {
                     DatagramPacket packet = new DatagramPacket(new byte[1], 1);
-                    socket.receive(packet);
+                    mSocket.receive(packet);
                     Log.d(TAG, "Received request from: " + packet.getAddress());
 
                     if (mOnRequestReceivedListener != null) {
@@ -83,7 +90,7 @@ public class MulticastServiceProvider {
 
                     DatagramSocket clientSocket = new DatagramSocket();
                     clientSocket.connect(packet.getAddress(), packet.getPort());
-                    DiscoveryResponse discoveryResponse = new DiscoveryResponse(socket.getNetworkInterface().getInetAddresses().nextElement(), mServicePort);
+                    DiscoveryResponse discoveryResponse = new DiscoveryResponse(mSocket.getNetworkInterface().getInetAddresses().nextElement(), mServicePort);
                     Log.d(TAG, "Sending response: " + discoveryResponse + " to " + packet.getAddress() + ':' + packet.getPort());
                     byte[] responseBytes = discoveryResponse.getBytes();
                     clientSocket.send(new DatagramPacket(responseBytes, responseBytes.length));
@@ -95,7 +102,7 @@ public class MulticastServiceProvider {
                 }
                 yield();
             }
-            socket.close();
+            mSocket.close();
         }
     }
 }

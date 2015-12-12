@@ -12,6 +12,7 @@ import org.spacebison.multimic.net.OnConnectedListener;
 import org.spacebison.multimic.net.OnDisconnectedListener;
 import org.spacebison.multimic.net.Protocol;
 
+import java.io.IOException;
 import java.net.InetAddress;
 
 /**
@@ -24,6 +25,8 @@ public class MediaSenderRecorder implements OnCommandListener {
     private AudioRecord mAudioRecord;
     private Client mClient;
     private RecordListener mRecordListener;
+    private OnConnectedListener mOnConnectedListener;
+    private OnDisconnectedListener mOnDisconnectedListener;
 
     public static MediaSenderRecorder getInstance() {
         if (sInstance == null) {
@@ -39,15 +42,23 @@ public class MediaSenderRecorder implements OnCommandListener {
     public void connect(InetAddress address, int port) {
         mClient = new Client(address, port);
         mClient.setOnCommandListener(this);
+        mClient.setOnConnectedListener(mOnConnectedListener);
+        mClient.setOnDisconnectedListener(mOnDisconnectedListener);
         mClient.start();
     }
 
     public void setOnConnectedListener(OnConnectedListener onConnectedListener) {
-        mClient.setOnConnectedListener(onConnectedListener);
+        mOnConnectedListener = onConnectedListener;
+        if (mClient != null) {
+            mClient.setOnConnectedListener(onConnectedListener);
+        }
     }
 
     public void setOnDisconnectedListener(OnDisconnectedListener onDisconnectedListener) {
-        mClient.setOnDisconnectedListener(onDisconnectedListener);
+        mOnDisconnectedListener = onDisconnectedListener;
+        if (mClient != null) {
+            mClient.setOnDisconnectedListener(onDisconnectedListener);
+        }
     }
 
     public void release() {
@@ -65,7 +76,8 @@ public class MediaSenderRecorder implements OnCommandListener {
     }
 
     @Override
-    public void onCommand(byte command) {
+    public void onCommand(byte command, long whenReceived) {
+        long now = System.currentTimeMillis();
         Log.d(TAG, "Got command: " + Integer.toHexString(command));
         switch (command) {
             case Protocol.START_RECORD:
@@ -85,6 +97,15 @@ public class MediaSenderRecorder implements OnCommandListener {
                 mAudioRecord = null;
                 mClient.stopSending();
                 onRecordingFinished();
+                break;
+
+            case Protocol.NTP_REQUEST:
+                Log.d(TAG, "Got NTP request");
+                try {
+                    mClient.sendNtpResponse(whenReceived);
+                } catch (IOException e) {
+                    Log.e(TAG, "Error sending NTP response: " + e);
+                }
                 break;
 
             default:

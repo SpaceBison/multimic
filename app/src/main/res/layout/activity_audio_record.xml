@@ -23,6 +23,15 @@
         android:layout_centerInParent="true"
         android:textColor="@color/gray"
         android:textSize="30sp"
+        android:typeface="monospace"
         android:text="00:00"/>
+
+    <ProgressBar
+        android:id="@+id/progressCircle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        style="?android:attr/progressBarStyleLarge"
+        android:visibility="invisible"/>
 
 </RelativeLayout>

@@ -4,6 +4,7 @@ import android.util.Log;
 
 import org.spacebison.multimic.MultimicApplication;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -83,6 +84,13 @@ public class Client {
         onDisconnected();
     }
 
+    public void sendNtpResponse(long whenReceived) throws IOException {
+        DataOutputStream dos = new DataOutputStream(mSocket.getOutputStream());
+        dos.writeLong(System.currentTimeMillis());
+        dos.writeLong(whenReceived);
+        dos.flush();
+    }
+
     public void setOnCommandListener(OnCommandListener onCommandListener) {
         mOnCommandListener = onCommandListener;
     }
@@ -122,8 +130,9 @@ public class Client {
                 input = mSocket.getInputStream();
                 while (!isInterrupted()) {
                     byte b = (byte) input.read();
+                    long now = System.currentTimeMillis();
                     Log.d(TAG, "Got command: " + Integer.toHexString(b));
-                    onCommand(b);
+                    onCommand(b, now);
                 }
             } catch (IOException e) {
                 Log.e(TAG, "Error receving command: " + e);
@@ -161,12 +170,12 @@ public class Client {
         }
     }
 
-    private void onCommand(final byte b) {
+    private void onCommand(final byte b, final long when) {
         if (mOnCommandListener != null) {
             mExecutor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    mOnCommandListener.onCommand(b);
+                    mOnCommandListener.onCommand(b, when);
                 }
             });
         }
