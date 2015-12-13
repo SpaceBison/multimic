@@ -19,7 +19,6 @@ public class TrackView extends View {
     private List<Float> mSamples = new ArrayList<>();
     private float mVerticalZoom = 1.0f;
     private float mHorizontalZoom  = 0.01f;
-    private float mGain = 1.0f;
     private int mPlotColor;
     private Paint mPlotPaint = new Paint();
 
@@ -48,6 +47,18 @@ public class TrackView extends View {
         mSamples = samples;
     }
 
+    public void setVerticalZoom(float verticalZoom) {
+        mVerticalZoom = verticalZoom;
+    }
+
+    public void setHorizontalZoom(float horizontalZoom) {
+        mHorizontalZoom = horizontalZoom;
+    }
+
+    public void setPlotColor(int plotColor) {
+        mPlotColor = plotColor;
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -58,7 +69,7 @@ public class TrackView extends View {
         int middle = height / 2;
 
         for (int i = 0; i < wavePixels; i++) {
-            float val = Math.min(mSamples.get(i * sampleSkip) * mVerticalZoom * mGain, height);
+            float val = Math.min(mSamples.get(i * sampleSkip) * mVerticalZoom, height);
             canvas.drawLine(i, middle - val / 2, i, middle + val / 2, mPlotPaint);
         }
 

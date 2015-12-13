@@ -14,6 +14,8 @@ import org.spacebison.multimic.net.Protocol;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Created by cmb on 03.11.15.
@@ -22,6 +24,7 @@ public class MediaSenderRecorder implements OnCommandListener {
     private static final String TAG = "cmb.MediaSenderRec";
     private static MediaSenderRecorder sInstance;
     private static final Object LOCK = new Object();
+    private final ScheduledExecutorService mExecutor = Executors.newSingleThreadScheduledExecutor();
     private AudioRecord mAudioRecord;
     private Client mClient;
     private RecordListener mRecordListener;
@@ -77,15 +80,18 @@ public class MediaSenderRecorder implements OnCommandListener {
 
     @Override
     public void onCommand(byte command, long whenReceived) {
-        long now = System.currentTimeMillis();
         Log.d(TAG, "Got command: " + Integer.toHexString(command));
         switch (command) {
             case Protocol.START_RECORD:
+                //DataInputStream dis = new DataInputStream(mClient.getSocket().getInputStream());
+                //long startTime = dis.readLong();
+                //Log.d(TAG, "Record start time: " + new Date(startTime));
                 mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC,
                         44100,
                         1,
                         AudioFormat.ENCODING_PCM_16BIT,
                         mClient.getBufferSize());
+                //Thread.sleep(startTime - System.currentTimeMillis());
                 mAudioRecord.startRecording();
                 mClient.startSending(new AudioRecordInputStream(mAudioRecord));
                 onRecordingStarted();

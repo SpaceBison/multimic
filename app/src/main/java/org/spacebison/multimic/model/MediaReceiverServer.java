@@ -20,6 +20,7 @@ import org.spacebison.multimic.net.discovery.MulticastServiceProvider;
 import org.spacebison.multimic.net.discovery.OnRequestReceivedListener;
 
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -30,12 +31,14 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Created by cmb on 25.10.15.
@@ -55,6 +58,8 @@ public class MediaReceiverServer {
                     Protocol.SERVER_PORT);
     private Server mServer = new Server(Protocol.SERVER_PORT);
     private LinkedList<Socket> mClients = new LinkedList<>();
+    private HashMap<Socket, Long> mClientDelays = new HashMap<>();
+    private HashMap<Socket, Long> mClientTimeOffsets = new HashMap<>();
     private HashMap<Socket, ClientConnectionSession> mSessions = new HashMap<>();
     private boolean running = false;
     private OnConnectedListener mOnConnectedListener;
@@ -64,6 +69,7 @@ public class MediaReceiverServer {
     private OnSocketBytesTransferredListener mOnSocketBytesTransferredListener;
     private ExecutorService mExecutor = Executors.newCachedThreadPool(MultimicApplication.getAnalyticsThreadFactory());
     private ExecutorService mUncertainExecutor = Util.newMostCurrentTaskExecutor(MultimicApplication.getAnalyticsThreadFactory());
+    private ScheduledExecutorService mScheduledExecutor = Executors.newSingleThreadScheduledExecutor();
     private AudioRecordSession mAudioRecordSession;
 
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
@@ -128,6 +134,7 @@ public class MediaReceiverServer {
             mExecutor.execute(new Runnable() {
                 @Override
                 public void run() {
+                    sendNtpRequest(socket);
                     mOnConnectedListener.onConnected(socket);
                 }
             });
@@ -202,6 +209,14 @@ public class MediaReceiverServer {
         mServiceProvider.setOnRequestReceivedListener(onRequestReceivedListener);
     }
 
+    private long getMaxDelay() {
+        if (mClientDelays.isEmpty()) {
+            return 500;
+        } else {
+            return Math.max(500, Collections.max(mClientDelays.values()));
+        }
+    }
+
     public void sendNtpRequest(final Socket socket) {
         if (mSessions.containsKey(socket)) {
             Log.w(TAG, "Cannot send NTP request during an active session! " + socket);
@@ -226,16 +241,20 @@ public class MediaReceiverServer {
                     requestReceived = dis.readLong();              // 2
                     responseReceived = System.currentTimeMillis(); // 4
 
-                    long roundTripDelay = ((responseReceived - requestSent) - (responseSent - requestReceived));
-                    long timeOffset = ((requestReceived - requestSent) + (responseSent - requestReceived));
+                    long delay = ((responseReceived - requestSent) - (responseSent - requestReceived));
+                    long offset = ((requestReceived - requestSent) + (responseSent - requestReceived));
+                    long timestampOffset = offset - delay;
 
                     Log.d(TAG, "Request sent:      " + requestSent);
                     Log.d(TAG, "Request received:  " + requestReceived);
                     Log.d(TAG, "Response sent:     " + responseSent);
                     Log.d(TAG, "Response received: " + responseReceived);
-                    Log.d(TAG, "Round trip delay: " + roundTripDelay);
-                    Log.d(TAG, "Time offset:      " + timeOffset);
-                    Log.d(TAG, "Offset - delay:   " + (timeOffset - roundTripDelay));
+                    Log.d(TAG, "Round trip delay: " + delay);
+                    Log.d(TAG, "Time offset:      " + offset);
+                    Log.d(TAG, "Offset - delay:   " + (offset - delay));
+
+                    mClientTimeOffsets.put(socket, timestampOffset);
+                    mClientDelays.put(socket, delay);
                 } catch (IOException e) {
                     Log.d(TAG, "Error completing NTP request: " + e);
                 }
@@ -252,6 +271,12 @@ public class MediaReceiverServer {
 
         Log.d(TAG, "Dir: " + dirPath);
         Log.d(TAG, "Preparing to start " + mClients.size() + " sessions");
+
+        long delay = 2 * getMaxDelay();
+        long startTime = System.currentTimeMillis() + delay;
+
+        Log.d(TAG, "Start time: " + new Date(startTime) + " (delay " + delay + " ms)");
+
         File file = null;
         int i = 1;
         for (Socket s : mClients) {
@@ -272,7 +297,7 @@ public class MediaReceiverServer {
                 Log.e(TAG, "Error opening file to write: " + e);
                 continue;
             }
-            ClientConnectionSession session = new ClientConnectionSession(s, os);
+            ClientConnectionSession session = new ClientConnectionSession(s, os, startTime + mClientTimeOffsets.get(s));
             final File finalFile = file;
             session.setListener(new OnSessionEndedListener() {
                 @Override
@@ -284,7 +309,7 @@ public class MediaReceiverServer {
             session.start();
         }
 
-        mAudioRecordSession = new AudioRecordSession(localFile, new OnRecordingEndedListener() {
+        mAudioRecordSession = new AudioRecordSession(localFile, startTime, new OnRecordingEndedListener() {
             @Override
             public void onRecordingEnded() {
                 WavFileEncoder.getInstance().encode(localFile);
@@ -349,11 +374,13 @@ public class MediaReceiverServer {
     private class AudioRecordSession extends Thread {
         private static final String TAG = "cmb.AudioRecordSession";
         private File mFile;
+        private long mStartTime;
         private OnRecordingEndedListener mListener;
 
-        public AudioRecordSession(File file, OnRecordingEndedListener listener) {
+        public AudioRecordSession(File file, long startTime, OnRecordingEndedListener listener) {
             mFile = file;
             mListener = listener;
+            mStartTime = startTime;
         }
 
         @Override
@@ -408,14 +435,16 @@ public class MediaReceiverServer {
         private static final String TAG = "cmb.ClientConneSession";
         private Socket mSocket;
         private OutputStream mOutput;
-        private OutputStream mClientOutput;
+        private DataOutputStream mClientOutput;
         private OnSessionEndedListener mListener;
+        private long mStartTime;
 
-        public ClientConnectionSession(Socket socket, OutputStream output) {
+        public ClientConnectionSession(Socket socket, OutputStream output, long startTime) {
             mSocket = socket;
             mOutput = output;
+            mStartTime = startTime;
             try {
-                mClientOutput = mSocket.getOutputStream();
+                mClientOutput = new DataOutputStream(mSocket.getOutputStream());
             } catch (IOException e) {
                 e.printStackTrace();
             }

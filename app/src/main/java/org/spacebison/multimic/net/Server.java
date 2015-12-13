@@ -114,9 +114,11 @@ public class Server {
 
         public void release() {
             interrupt();
-            try {
-                mServerSocket.close();
-            } catch (IOException ignored) {
+            if (mServerSocket != null) {
+                try {
+                    mServerSocket.close();
+                } catch (IOException ignored) {
+                }
             }
         }
     }

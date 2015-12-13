@@ -11,6 +11,10 @@ import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import com.google.android.gms.analytics.HitBuilders;
+import com.google.android.gms.analytics.Tracker;
+
+import org.spacebison.multimic.MultimicApplication;
 import org.spacebison.multimic.R;
 import org.spacebison.multimic.Util;
 import org.spacebison.multimic.model.MediaReceiverServer;
@@ -23,6 +27,7 @@ import java.util.TreeMap;
 public class PlayerListActivity extends AppCompatActivity {
     private static final String TAG = "cmb.PlayerList";
     private SessionListAdapter mSessionListAdapter;
+    private Tracker mTracker;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -50,6 +55,14 @@ public class PlayerListActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+
+        mTracker = MultimicApplication.getDefaultTracker();
+    }
+
+    protected void onResume() {
+        super.onResume();
+        mTracker.setScreenName("Session List");
+        mTracker.send(new HitBuilders.ScreenViewBuilder().build());
     }
 
     private class SessionListAdapter extends BaseAdapter {

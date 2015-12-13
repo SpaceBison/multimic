@@ -1,5 +1,7 @@
 package org.spacebison.multimic.audio;
 
+import android.util.Log;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -86,12 +88,15 @@ public class WavUtils {
             throw new WavHeaderException("Invalid chunkId: " + Integer.toHexString(chunkId) + " (should be " + Integer.toHexString(0x46464952) + ')');
         }
 
-        //TODO;
+        inputStream.read(intArray);
+        // TODO: don't ignore this stuff
+        Log.d("RIFF", "Skipping next " + 36 + " bytes");
+        inputStream.skip(36);
 
         return header;
     }
 
-    private static byte[] toEndianSwappedByteArray(int integer) {
+    public static byte[] toEndianSwappedByteArray(int integer) {
         byte[] array = new byte[4];
 
         for(int i=0; i < 4; ++i) {
@@ -102,18 +107,18 @@ public class WavUtils {
         return array;
     }
 
-    private static int fromEndianSwappedByteArrayToInt(byte[] array) {
+    public static int fromEndianSwappedByteArrayToInt(byte[] array) {
         int integer = 0;
 
         for (int i = 0; i < 4; ++i) {
-            integer |= array[3 - i];
             integer <<= 8;
+            integer |= array[3 - i];
         }
 
         return integer;
     }
 
-    private static byte[] toEndianSwappedByteArray(short integer) {
+    public static byte[] toEndianSwappedByteArray(short integer) {
         byte[] array = new byte[2];
 
         for(int i=0; i < 2; ++i) {
@@ -124,12 +129,12 @@ public class WavUtils {
         return array;
     }
 
-    private static short fromEndianSwappedByteArrayToShort(byte[] array) {
+    public static short fromEndianSwappedByteArrayToShort(byte[] array) {
         short integer = 0;
 
         for (int i = 0; i < 2; ++i) {
-            integer |= array[1 - i];
             integer <<= 8;
+            integer |= array[1 - i];
         }
 
         return integer;
