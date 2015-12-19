@@ -53,6 +53,8 @@ public class PlayerActivity extends AppCompatActivity {
         String dirPath = MediaReceiverServer.getRecordingDirPath();
         File dir = new File(dirPath);
 
+        setTitle(sessionPrefix);
+
         if (savedInstanceState == null) {
             sTracks.clear();
         }
@@ -157,13 +159,18 @@ public class PlayerActivity extends AppCompatActivity {
                 }
             }
 
+            final int samplesInBuffer = mBufferSize / 2;
             final byte[] buffer = new byte[2 * mBufferSize];
             final byte[] trackBuffer = new byte[mBufferSize];
-            final byte[] shortBuffer = new byte[2];
+            final float[] leftBuffer = new float[samplesInBuffer];
+            final float[] rightBuffer = new float[samplesInBuffer];
             float pan;
             short sample = 0;
             short left = 0;
             short right = 0;
+            float fSample;
+            float fLeft = 0;
+            float fRight = 0;
             int bytes;
             Iterator<Map.Entry<Track, DataInputStream>> it;
 
@@ -173,13 +180,15 @@ public class PlayerActivity extends AppCompatActivity {
 
             while (!isInterrupted() && !inputStreams.isEmpty()) {
                 Arrays.fill(buffer, (byte) 0);
+                Arrays.fill(leftBuffer, 0);
+                Arrays.fill(rightBuffer, 0);
                 it = inputStreams.entrySet().iterator();
                 while (it.hasNext()) {
                     Map.Entry<Track, DataInputStream> e = it.next();
                     Track t = e.getKey();
                     DataInputStream inputStream = e.getValue();
                     try {
-                        pan = (t.pan + 1f) / 2;
+                        pan = (t.pan + 1f) / 2;;
 
                         bytes = inputStream.read(trackBuffer);
                         if (bytes <= 0) {
@@ -192,22 +201,14 @@ public class PlayerActivity extends AppCompatActivity {
                             continue;
                         }
 
-                        for (int i = 0; i < bytes; i += 2) {
-                            left = 0;
-                            right = 0;
+                        for (int i = 0; i < bytes / 2; i++) {
+                            fSample = trackBuffer[2*i+1] << 8;
+                            fSample += trackBuffer[2*i] & 0xff;
 
-                            sample = (short) (trackBuffer[i + 1] << 8);
-                            sample += trackBuffer[i];
+                            fSample *= t.volume;
 
-                            sample *= t.volume;
-
-                            right = (short) (sample * pan / inputStreams.size());
-                            left = (short) (sample * (1f - pan) / inputStreams.size());
-
-                            buffer[2*i+1] += (byte)((left >> 8) & 0xff);
-                            buffer[2*i+0] += (byte)(left & 0xff);
-                            buffer[2*i+3] += (byte)((right >> 8) & 0xff);
-                            buffer[2*i+2] += (byte)(right & 0xff);
+                            rightBuffer[i] += fSample * pan / inputStreams.size();
+                            leftBuffer[i] += fSample * (1f - pan) / inputStreams.size();
                         }
                     } catch (IOException e1) {
                         Log.w(TAG, "Error submitting data to play: " + e1);
@@ -219,6 +220,17 @@ public class PlayerActivity extends AppCompatActivity {
                     }
                 }
 
+                for(int i = 0; i < samplesInBuffer; i++) {
+                    left = (short) Math.round(leftBuffer[i]);
+                    right = (short) Math.round(rightBuffer[i]);
+
+                    buffer[4*i+1] += (byte)(left >>> 8);
+                    buffer[4*i+0] += (byte)(left);
+
+
+                    buffer[4*i+3] += (byte)(right >>> 8);
+                    buffer[4*i+2] += (byte)(right);
+                }
 
                 mAudioTrack.write(buffer, 0, buffer.length);
             }
