@@ -326,6 +326,10 @@ public class MediaReceiverServer {
         return sdCard.getAbsolutePath() + "/multimic";
     }
 
+    public static String getExportDirPath() {
+        return getRecordingDirPath() + "/exported";
+    }
+
     public void stopRecording() {
         Log.d(TAG, "Stop receiving");
         if (mAudioRecordSession != null) {

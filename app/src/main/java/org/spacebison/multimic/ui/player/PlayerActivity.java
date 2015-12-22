@@ -1,19 +1,25 @@
 package org.spacebison.multimic.ui.player;
 
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.ActionMode;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.BaseAdapter;
+import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
-import android.widget.SeekBar;
-import android.widget.TextView;
 
 import com.google.android.gms.analytics.ExceptionReporter;
 import com.google.android.gms.analytics.HitBuilders;
@@ -21,53 +27,86 @@ import com.google.android.gms.analytics.Tracker;
 
 import org.spacebison.multimic.MultimicApplication;
 import org.spacebison.multimic.R;
-import org.spacebison.multimic.Util;
 import org.spacebison.multimic.audio.WavHeaderException;
 import org.spacebison.multimic.audio.WavUtils;
+import org.spacebison.multimic.io.AudioTrackOutputStream;
+import org.spacebison.multimic.io.OffsetInputStream;
 import org.spacebison.multimic.model.MediaReceiverServer;
 
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 
 public class PlayerActivity extends AppCompatActivity {
     public static final String EXTRA_SESSION_PREFIX = "session_prefix";
     private static final String TAG = "cmb.PlayerActivity";
-    private static final TreeSet<Track> sTracks = new TreeSet<>();
+    static final TreeSet<Track> sTracks = new TreeSet<>();
+    private String mSessionPrefix;
+    private TrackListAdapter mListAdapter;
+    ListView mListView;
     private Tracker mTracker;
     private AudioPlayThread mThread;
+    private Track mSelectedTrack;
+    private ActionMode mActionMode;
+    private ActionModeCallback mActionModeCallback = new ActionModeCallback();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_player);
 
-        String sessionPrefix = getIntent().getStringExtra(EXTRA_SESSION_PREFIX);
+        mSessionPrefix = getIntent().getStringExtra(EXTRA_SESSION_PREFIX);
         String dirPath = MediaReceiverServer.getRecordingDirPath();
         File dir = new File(dirPath);
 
-        setTitle(sessionPrefix);
+        setTitle(mSessionPrefix);
 
         if (savedInstanceState == null) {
             sTracks.clear();
         }
 
-        for (String fileName : dir.list()) {
-            if (fileName.startsWith(sessionPrefix) && fileName.endsWith(".wav")) {
-                Log.d(TAG, "Adding " + fileName);
-                sTracks.add(new Track(dir.getAbsolutePath(), fileName));
+        File[] files = dir.listFiles(new FilenameFilter() {
+            @Override
+            public boolean accept(File dir, String filename) {
+                return filename.startsWith(mSessionPrefix) && filename.endsWith(".wav");
+            }
+        });
+
+        for (File file : files) {
+            if (file.isFile()) {
+                Log.d(TAG, "Adding " + file);
+                sTracks.add(new Track(file));
             }
         }
 
-        ListView trackList = (ListView) findViewById(R.id.trackList);
-        trackList.setAdapter(new TrackListAdapter());
+        mListView = (ListView) findViewById(R.id.trackList);
+        mListAdapter = new TrackListAdapter(this);
+        mListView.setAdapter(mListAdapter);
+        mListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                if (mActionMode != null) {
+                    return false;
+                }
+
+                mSelectedTrack = (Track) mListAdapter.getItem(position);
+                mActionMode = startActionMode(mActionModeCallback);
+                view.setSelected(true);
+                return true;
+            }
+        });
 
         mTracker = MultimicApplication.getDefaultTracker();
     }
@@ -76,6 +115,141 @@ public class PlayerActivity extends AppCompatActivity {
         super.onResume();
         mTracker.setScreenName("Player");
         mTracker.send(new HitBuilders.ScreenViewBuilder().build());
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_player, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.export:
+                final EditText fileNameEdit = new EditText(this);
+                fileNameEdit.setText(mSessionPrefix + "_mix.wav");
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder.setTitle("Export");
+                builder.setView(fileNameEdit);
+                builder.setCancelable(true);
+                builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        new AsyncTask<Void, Long, Void>() {
+                            private ProgressDialog mProgressDialog;
+                            private String mFilename;
+
+                            @Override
+                            protected void onPreExecute() {
+                                mFilename = fileNameEdit.getText().toString();
+                                mProgressDialog = new ProgressDialog(PlayerActivity.this);
+                                mProgressDialog.setTitle("Exporting");
+                                mProgressDialog.setCancelable(false);
+                                mProgressDialog.setMax(1);
+                                mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                                mProgressDialog.setIndeterminate(true);
+                                mProgressDialog.setProgressNumberFormat(null);
+                                mProgressDialog.setProgressPercentFormat(null);
+                                mProgressDialog.show();
+                            }
+
+                            @Override
+                            protected Void doInBackground(Void... params) {
+                                File tmpFile = null;
+                                FileOutputStream fos = null;
+                                FileInputStream fis = null;
+                                try {
+                                    File exportDir = new File(MediaReceiverServer.getExportDirPath());
+
+                                    if (!exportDir.exists()) {
+                                        exportDir.mkdirs();
+                                    }
+
+                                    tmpFile = new File(exportDir, mFilename + ".tmp");
+                                    tmpFile.createNewFile();
+                                    fos = new FileOutputStream(tmpFile);
+                                    writeMixedTracks(getAudioFileInputs(sTracks), fos, 1024);
+                                    fos.close();
+
+                                    long fileBytes = tmpFile.length();
+                                    int numSamples = (int) (fileBytes / 2 / 16 * 8);
+
+                                    File exportFile = new File(exportDir, mFilename);
+                                    exportFile.createNewFile();
+                                    fos = new FileOutputStream(exportFile);
+                                    WavUtils.writeRiffHeader(fos, (short)2, 44100, (short)16, numSamples);
+
+                                    fis = new FileInputStream(tmpFile);
+                                    byte[] buffer = new byte[1024];
+                                    int bytesRead;
+                                    long totalBytesRead = 0;
+
+                                    mProgressDialog.setIndeterminate(false);
+                                    mProgressDialog.setProgressPercentFormat(NumberFormat.getPercentInstance());
+
+                                    while((bytesRead = fis.read(buffer)) > 0 ) {
+                                        fos.write(buffer, 0, bytesRead);
+                                        totalBytesRead += bytesRead;
+                                        publishProgress(fileBytes, totalBytesRead);
+                                    }
+                                } catch (FileNotFoundException e) {
+                                    e.printStackTrace();
+                                    cancel(true);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                } finally {
+                                    if (fis != null) {
+                                        try {
+                                            fis.close();
+                                        } catch (IOException ignored) {
+                                        }
+                                    }
+
+                                    if (fos != null) {
+                                        try {
+                                            fos.close();
+                                        } catch (IOException ignored) {
+                                        }
+                                    }
+
+                                    if (tmpFile != null) {
+                                        tmpFile.delete();
+                                    }
+                                }
+
+                                return null;
+                            }
+
+                            @Override
+                            protected void onPostExecute(Void aVoid) {
+                                mProgressDialog.dismiss();
+                            }
+
+                            @Override
+                            protected void onProgressUpdate(Long... values) {
+                                mProgressDialog.setIndeterminate(false);
+                                mProgressDialog.setMax((int) (values[0] / 1024));
+                                mProgressDialog.setProgress((int) (values[1] / 1024));
+                            }
+                        }.execute();
+                    }
+                });
+                builder.show();
+                return true;
+
+            case R.id.reset:
+                for (Track t : sTracks) {
+                    t.offset = 0;
+                    t.pan = 0;
+                    t.volume = 1;
+                }
+                mListAdapter.notifyDataSetChanged();
+                return true;
+
+            default:
+            return super.onOptionsItemSelected(item);
+        }
     }
 
     @Override
@@ -92,19 +266,26 @@ public class PlayerActivity extends AppCompatActivity {
             b.setText("Stop");
             mThread = new AudioPlayThread();
             mThread.start();
+            mListAdapter.setOffsetControlVisible(false);
         } else {
             b.setText("Play");
             mThread.interrupt();
             mThread = null;
+            mListAdapter.setOffsetControlVisible(true);
         }
     }
 
-    private class Track implements Comparable {
+    class Track implements Comparable {
         public String fileName;
         public File file;
         public float volume = 1;
         public float pan = 0;
-        public long offset;
+        public long offset = 0;
+
+        public Track(File file) {
+            this.file = file;
+            fileName = file.getName();
+        }
 
         public Track(String dir, String fileName) {
             this.fileName = fileName;
@@ -143,97 +324,14 @@ public class PlayerActivity extends AppCompatActivity {
         public void run() {
             Log.d(TAG, "Init play");
 
-            HashMap<Track, DataInputStream> inputStreams = new HashMap<>();
-
-            for (Track t : sTracks) {
-                try {
-                    DataInputStream dis = new DataInputStream((new FileInputStream(t.file)));
-                    WavUtils.readRiffHeader(dis);
-                    inputStreams.put(t, dis);
-                } catch (FileNotFoundException e) {
-                    Log.w(TAG, "Could not open file to play: " + e);
-                } catch (WavHeaderException e) {
-                    Log.d(TAG, "Invalid WAV header: " + e);
-                } catch (IOException e) {
-                    Log.d(TAG, "Error reading WAV header: " + e);
-                }
-            }
-
-            final int samplesInBuffer = mBufferSize / 2;
-            final byte[] buffer = new byte[2 * mBufferSize];
-            final byte[] trackBuffer = new byte[mBufferSize];
-            final float[] leftBuffer = new float[samplesInBuffer];
-            final float[] rightBuffer = new float[samplesInBuffer];
-            float pan;
-            short sample = 0;
-            short left = 0;
-            short right = 0;
-            float fSample;
-            float fLeft = 0;
-            float fRight = 0;
-            int bytes;
-            Iterator<Map.Entry<Track, DataInputStream>> it;
+            HashMap<Track, DataInputStream> inputStreams = getAudioFileInputs(sTracks);
 
             Log.d(TAG, "Start play");
 
             mAudioTrack.play();
+            OutputStream os = new AudioTrackOutputStream(mAudioTrack);
 
-            while (!isInterrupted() && !inputStreams.isEmpty()) {
-                Arrays.fill(buffer, (byte) 0);
-                Arrays.fill(leftBuffer, 0);
-                Arrays.fill(rightBuffer, 0);
-                it = inputStreams.entrySet().iterator();
-                while (it.hasNext()) {
-                    Map.Entry<Track, DataInputStream> e = it.next();
-                    Track t = e.getKey();
-                    DataInputStream inputStream = e.getValue();
-                    try {
-                        pan = (t.pan + 1f) / 2;;
-
-                        bytes = inputStream.read(trackBuffer);
-                        if (bytes <= 0) {
-                            Log.d(TAG, "End of file: " + t.fileName);
-                            try {
-                                inputStream.close();
-                            } catch (IOException ignored) {
-                            }
-                            it.remove();
-                            continue;
-                        }
-
-                        for (int i = 0; i < bytes / 2; i++) {
-                            fSample = trackBuffer[2*i+1] << 8;
-                            fSample += trackBuffer[2*i] & 0xff;
-
-                            fSample *= t.volume;
-
-                            rightBuffer[i] += fSample * pan / inputStreams.size();
-                            leftBuffer[i] += fSample * (1f - pan) / inputStreams.size();
-                        }
-                    } catch (IOException e1) {
-                        Log.w(TAG, "Error submitting data to play: " + e1);
-                        try {
-                            inputStream.close();
-                        } catch (IOException ignored) {
-                        }
-                        it.remove();
-                    }
-                }
-
-                for(int i = 0; i < samplesInBuffer; i++) {
-                    left = (short) Math.round(leftBuffer[i]);
-                    right = (short) Math.round(rightBuffer[i]);
-
-                    buffer[4*i+1] += (byte)(left >>> 8);
-                    buffer[4*i+0] += (byte)(left);
-
-
-                    buffer[4*i+3] += (byte)(right >>> 8);
-                    buffer[4*i+2] += (byte)(right);
-                }
-
-                mAudioTrack.write(buffer, 0, buffer.length);
-            }
+            writeMixedTracks(inputStreams, os, mBufferSize);
 
             Log.d(TAG, "Stop play, releasing");
 
@@ -254,99 +352,189 @@ public class PlayerActivity extends AppCompatActivity {
                     ((Button) findViewById(R.id.playButton)).setText("Play");
                 }
             });
+
+            mListAdapter.setOffsetControlVisible(true);
         }
     }
 
-    private class TrackListAdapter extends BaseAdapter {
-        @Override
-        public int getCount() {
-            return sTracks.size();
-        }
+    private static void writeMixedTracks(HashMap<Track, DataInputStream> inputStreams, OutputStream os, int bufferSize) {
+        final int samplesInBufferSize = bufferSize / 2;
+        final byte[] buffer = new byte[2 * bufferSize];
+        final byte[] trackBuffer = new byte[bufferSize];
+        final float[] leftBuffer = new float[samplesInBufferSize];
+        final float[] rightBuffer = new float[samplesInBufferSize];
+        float pan;
+        short left = 0;
+        short right = 0;
+        float fSample;
+        int bytes;
+        Iterator<Map.Entry<Track, DataInputStream>> it;
 
-        @Override
-        public Object getItem(int position) {
-            return Util.getObjectAt(sTracks, position);
-        }
+        while (!Thread.interrupted() && !inputStreams.isEmpty()) {
+            Arrays.fill(buffer, (byte) 0);
+            Arrays.fill(leftBuffer, 0);
+            Arrays.fill(rightBuffer, 0);
+            it = inputStreams.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry<Track, DataInputStream> e = it.next();
+                Track t = e.getKey();
+                DataInputStream inputStream = e.getValue();
+                try {
+                    pan = (t.pan + 1f) / 2;;
 
-        @Override
-        public long getItemId(int position) {
-            return 0;
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            if (convertView == null) {
-                convertView = getLayoutInflater().inflate(R.layout.list_item_track_controls, parent, false);
-            }
-
-            final Track track = (Track) getItem(position);
-
-            final TextView numberText = (TextView) convertView.findViewById(R.id.trackNumberText);
-            final TextView volumeText = (TextView) convertView.findViewById(R.id.volumeText);
-            final SeekBar volumeSeek = (SeekBar) convertView.findViewById(R.id.volumeSeek);
-            final TextView panText = (TextView) convertView.findViewById(R.id.panText);
-            final SeekBar panSeek = (SeekBar) convertView.findViewById(R.id.panSeek);
-
-            numberText.setText(Integer.toString(position));
-
-            setVolumeText(volumeText, track);
-            volumeSeek.setProgress((int) (track.volume * 256));
-            volumeSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    track.volume =  progress / 256f;
-                    setVolumeText(volumeText, track);
-                }
-
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {
-                }
-
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {
-                }
-            });
-
-            setPanText(track, panText);
-            panSeek.setProgress((int) ((track.pan + 1) * 128));
-            panSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (fromUser && Math.abs(progress - 128) < 15) {
-                        seekBar.setProgress(128);
-                        return;
+                    bytes = inputStream.read(trackBuffer);
+                    if (bytes <= 0) {
+                        Log.d(TAG, "End of file: " + t.fileName);
+                        try {
+                            inputStream.close();
+                        } catch (IOException ignored) {
+                        }
+                        it.remove();
+                        continue;
                     }
 
-                    track.pan = progress / 128f - 1f;
-                    setPanText(track, panText);
+                    for (int i = 0; i < bytes / 2; i++) {
+                        fSample = trackBuffer[2*i+1] << 8;
+                        fSample += trackBuffer[2*i] & 0xff;
+
+                        fSample *= t.volume;
+
+                        rightBuffer[i] += fSample * pan / inputStreams.size();
+                        leftBuffer[i] += fSample * (1f - pan) / inputStreams.size();
+                    }
+                } catch (IOException e1) {
+                    Log.w(TAG, "Error submitting data to play: " + e1);
+                    try {
+                        inputStream.close();
+                    } catch (IOException ignored) {
+                    }
+                    it.remove();
                 }
+            }
 
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {
+            for(int i = 0; i < samplesInBufferSize; i++) {
+                left = (short) Math.round(leftBuffer[i]);
+                right = (short) Math.round(rightBuffer[i]);
 
-                }
+                buffer[4*i+1] += (byte)(left >>> 8);
+                buffer[4*i+0] += (byte)(left);
 
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {
 
-                }
-            });
+                buffer[4*i+3] += (byte)(right >>> 8);
+                buffer[4*i+2] += (byte)(right);
+            }
 
-            return convertView;
-        }
-
-        public void setPanText(Track track, TextView panText) {
-            if (track.pan == 0) {
-                panText.setText("Pan: C");
-            } else if (track.pan < 0) {
-                panText.setText("Pan: " + (int)(track.pan * -100) + "L");
-            } else {
-                panText.setText("Pan: " + (int)(track.pan * 100) + "R");
+            try {
+                os.write(buffer, 0, buffer.length);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
+    }
 
-        public void setVolumeText(TextView volumeText, Track track) {
-            volumeText.setText("Volume: " + (int) (track.volume * 100) + '%');
+    @NonNull
+    public static HashMap<Track, DataInputStream> getAudioFileInputs(Set<Track> tracks) {
+        HashMap<Track, DataInputStream> inputStreams = new HashMap<>();
+
+        for (Track t : tracks) {
+            try {
+                FileInputStream fis = new FileInputStream(t.file);
+                WavUtils.readRiffHeader(fis);
+                DataInputStream dis = new DataInputStream(new OffsetInputStream(fis, t.offset));
+                inputStreams.put(t, dis);
+            } catch (FileNotFoundException e) {
+                Log.w(TAG, "Could not open file to play: " + e);
+            } catch (WavHeaderException e) {
+                Log.d(TAG, "Invalid WAV header: " + e);
+            } catch (IOException e) {
+                Log.d(TAG, "Error reading WAV header: " + e);
+            }
+        }
+        return inputStreams;
+    }
+
+    private void alignToTrack(final Track track) {
+        if (sTracks.size() <= 1) {
+            return;
+        }
+
+        new AsyncTask<Void, Integer, Void>() {
+            private ProgressDialog mProgressDialog;
+
+            @Override
+            protected void onPreExecute() {
+                mProgressDialog = new ProgressDialog(PlayerActivity.this);
+                mProgressDialog.setTitle("Aligning");
+                mProgressDialog.setCancelable(false);
+                mProgressDialog.setIndeterminate(false);
+                mProgressDialog.setProgressPercentFormat(null);
+                mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                mProgressDialog.setMax(sTracks.size() - 1);
+                mProgressDialog.show();
+            }
+
+            @Override
+            protected Void doInBackground(Void... params) {
+                int tracksAligned = 0;
+
+
+
+                for (Track t : sTracks) {
+                    if (t == track) {
+                        continue;
+                    }
+
+                    for (int offset = -882; offset <= 882; ++offset) {
+
+                    }
+
+                    publishProgress(++tracksAligned);
+                }
+
+                return null;
+            }
+
+            @Override
+            protected void onPostExecute(Void aVoid) {
+                mProgressDialog.dismiss();
+            }
+
+            @Override
+            protected void onProgressUpdate(Integer... values) {
+                mProgressDialog.setProgress(values[0]);
+            }
+        }.execute();
+    }
+
+    private class ActionModeCallback implements ActionMode.Callback {
+
+        @Override
+        public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+            MenuInflater menuInflater = mode.getMenuInflater();
+            menuInflater.inflate(R.menu.menu_track, menu);
+            return true;
+        }
+
+        @Override
+        public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+            return false;
+        }
+
+        @Override
+        public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+            switch (item.getItemId()) {
+                case R.id.align:
+                    alignToTrack(mSelectedTrack);
+                    mode.finish();
+                    return true;
+            }
+            return false;
+        }
+
+        @Override
+        public void onDestroyActionMode(ActionMode mode) {
+            mActionMode = null;
+            mSelectedTrack = null;
         }
     }
 }

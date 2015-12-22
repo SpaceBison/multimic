@@ -13,7 +13,7 @@ import java.util.Arrays;
 public class OffsetInputStream extends FilterInputStream {
     private long mOffset;
 
-    protected OffsetInputStream(InputStream in, long offset) throws IOException {
+    public OffsetInputStream(InputStream in, long offset) throws IOException {
         super(in);
         mOffset = offset;
         if (offset >= 0) {
@@ -49,4 +49,11 @@ public class OffsetInputStream extends FilterInputStream {
             return super.read(buffer, byteOffset, byteCount);
         }
     }
+
+    @Override
+    public boolean markSupported() {
+        return false;
+    }
+
+
 }

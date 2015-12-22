@@ -20,6 +20,7 @@ import org.spacebison.multimic.Util;
 import org.spacebison.multimic.model.MediaReceiverServer;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeMap;
@@ -37,11 +38,15 @@ public class PlayerListActivity extends AppCompatActivity {
         mSessionListAdapter = new SessionListAdapter();
         String recordingDirPath = MediaReceiverServer.getRecordingDirPath();
         File recordingDir = new File(recordingDirPath);
-        String[] files = recordingDir.list();
+        File[] files = recordingDir.listFiles(new FileFilter() {
+            @Override
+            public boolean accept(File pathname) {
+                return pathname.isFile();
+            }
+        });
 
-        for (String file : files) {
-            Log.d(TAG, "Adding " + file);
-            mSessionListAdapter.add(file);
+        for (File file : files) {
+            mSessionListAdapter.add(file.getName());
         }
 
         ListView listView = (ListView) findViewById(R.id.sessionList);
@@ -70,6 +75,12 @@ public class PlayerListActivity extends AppCompatActivity {
         private boolean mReversed = false;
 
         public void add(String recording) {
+            Log.d(TAG, "Adding " + recording);
+
+            if (!recording.contains(".")) {
+                return;
+            }
+
             String noExtension = recording.substring(0, recording.lastIndexOf('.'));
             int lastUnderScore = noExtension.lastIndexOf('_');
             String sessionName = noExtension.substring(0, lastUnderScore);
