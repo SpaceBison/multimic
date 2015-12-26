@@ -170,7 +170,7 @@ class TrackListAdapter extends BaseAdapter {
         offsetText.post(new Runnable() {
             @Override
             public void run() {
-                String text = String.format("%.2f ms", track.offset / 44.1f);
+                String text = String.format("%.2f ms", track.offset / 88.2f);
                 Log.d(TAG, "Offset: " + track.offset + " text: " + text);
                 offsetText.setText(text);
             }

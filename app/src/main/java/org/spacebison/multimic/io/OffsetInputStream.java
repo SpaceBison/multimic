@@ -18,6 +18,7 @@ public class OffsetInputStream extends FilterInputStream {
         mOffset = offset;
         if (offset >= 0) {
             in.skip(offset);
+            mOffset = 0;
         }
     }
 
@@ -42,7 +43,7 @@ public class OffsetInputStream extends FilterInputStream {
                 return (int) (padByteCount + super.read(buffer, newOffset, newByteCount));
             } else {
                 Arrays.fill(buffer, byteOffset, byteOffset + byteCount, (byte)0);
-                mOffset -= byteCount;
+                mOffset += byteCount;
                 return byteCount;
             }
         } else {
@@ -55,5 +56,20 @@ public class OffsetInputStream extends FilterInputStream {
         return false;
     }
 
-
+    @Override
+    public long skip(long byteCount) throws IOException {
+        if (mOffset < 0) {
+            long padByteCount = -mOffset;
+            if (padByteCount < byteCount) {
+                int newByteCount = (int) (byteCount - padByteCount);
+                mOffset = 0;
+                return (int) (padByteCount + super.skip(newByteCount));
+            } else {
+                mOffset += byteCount;
+                return byteCount;
+            }
+        } else {
+            return super.skip(byteCount);
+        }
+    }
 }

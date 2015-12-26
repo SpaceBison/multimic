@@ -33,6 +33,7 @@ import org.spacebison.multimic.io.AudioTrackOutputStream;
 import org.spacebison.multimic.io.OffsetInputStream;
 import org.spacebison.multimic.model.MediaReceiverServer;
 
+import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -40,6 +41,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.NumberFormat;
 import java.util.Arrays;
@@ -254,10 +256,16 @@ public class PlayerActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        super.onBackPressed();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
         if (mThread != null) {
             mThread.interrupt();
+            mThread = null;
         }
-        super.onBackPressed();
     }
 
     public void clickPlayButton(View view) {
@@ -467,28 +475,103 @@ public class PlayerActivity extends AppCompatActivity {
                 mProgressDialog.setTitle("Aligning");
                 mProgressDialog.setCancelable(false);
                 mProgressDialog.setIndeterminate(false);
-                mProgressDialog.setProgressPercentFormat(null);
+                mProgressDialog.setProgressNumberFormat(null);
                 mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-                mProgressDialog.setMax(sTracks.size() - 1);
                 mProgressDialog.show();
             }
 
             @Override
             protected Void doInBackground(Void... params) {
-                int tracksAligned = 0;
+                final int streamBufferSize = 1024;
+                final int maxCollectedSamples = 44100;
+                long shortestLength = track.file.length();
 
+                for (Track t : sTracks) {
+                    long length = (t.file.length() - t.offset / 2);
 
+                    if (length < shortestLength) {
+                        shortestLength = length;
+                    }
+                }
 
+                int collectedSamples;
+                if (shortestLength < maxCollectedSamples) {
+                    collectedSamples = (int) (shortestLength / 4);
+                } else {
+                    collectedSamples = maxCollectedSamples;
+                }
+                final int offsetRange = collectedSamples / 2;
+                final int analyzedSamples = collectedSamples - offsetRange;
+                mProgressDialog.setMax((sTracks.size() - 1) * offsetRange);
+
+                Log.d(TAG, "Collect model samples");
+                System.gc();
+                byte[] sampleBuffer = new byte[2];
+                short[] modelSamples = new short[analyzedSamples];
+                try {
+                    InputStream is = new OffsetInputStream(new BufferedInputStream(new FileInputStream(track.file), streamBufferSize), track.offset);
+                    is.skip((long) analyzedSamples); /* firstByte = analyzedSamples / 2 * 2 */
+                    int sample;
+                    for (int i = 0; i < analyzedSamples; ++i) {
+                        is.read(sampleBuffer);
+                        sample = sampleBuffer[1] << 8;
+                        sample |= sampleBuffer[0] & 0xff;
+                        modelSamples[i] = (short) sample;
+                    }
+                    is.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                Log.d(TAG, "Aligning start");
+                System.gc();
+                short[] alignedSamples = new short[collectedSamples];
                 for (Track t : sTracks) {
                     if (t == track) {
                         continue;
                     }
 
-                    for (int offset = -882; offset <= 882; ++offset) {
+                    Log.d(TAG, "Reading track: " + t);
 
+                    try {
+                        InputStream is = new OffsetInputStream(new BufferedInputStream(new FileInputStream(t.file), streamBufferSize), t.offset - 2 * offsetRange);
+                        is.skip((long) collectedSamples); /* firstByte = analyzedSamples / 2 * 2 */
+                        int sample;
+                        for (int i = 0; i < collectedSamples; ++i) {
+                            is.read(sampleBuffer);
+                            sample = sampleBuffer[1] << 8;
+                            sample |= sampleBuffer[0] & 0xff;
+                            alignedSamples[i] = (short) sample;
+                        }
+                        is.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
 
-                    publishProgress(++tracksAligned);
+                    Log.d(TAG, "Aliging track: " + t);
+                    int bestOffset = 0;
+                    float bestScore = Float.MAX_VALUE;
+                    for (int offset = 0; offset < offsetRange; ++offset) {
+                        float score = 0;
+                        for (int sample = 0; sample < analyzedSamples; ++sample) {
+                            short modelSample = modelSamples[sample];
+                            short alignedSample = alignedSamples[offset + sample];
+                            int diff = modelSample - alignedSample;
+                            score += diff * diff;
+                        }
+
+                        if (score < bestScore) {
+                            bestScore = score;
+                            bestOffset = offset;
+                            Log.d(TAG, "Offset " + offset + " score " + score);
+                        }
+
+                        publishProgress(offset);
+                    }
+
+                    int offsetDiff = bestOffset * 2 - offsetRange;
+                    Log.d(TAG, "Offset diff: " + offsetDiff);
+                    t.offset += offsetDiff;
                 }
 
                 return null;
@@ -496,7 +579,10 @@ public class PlayerActivity extends AppCompatActivity {
 
             @Override
             protected void onPostExecute(Void aVoid) {
-                mProgressDialog.dismiss();
+                if (mProgressDialog.isShowing()) {
+                    mProgressDialog.dismiss();
+                }
+                mListAdapter.notifyDataSetInvalidated();
             }
 
             @Override

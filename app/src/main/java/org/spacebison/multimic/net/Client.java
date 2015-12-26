@@ -128,7 +128,7 @@ public class Client {
             InputStream input = null;
             try {
                 input = mSocket.getInputStream();
-                while (!isInterrupted()) {
+                while (!isInterrupted() && mSocket.isConnected()) {
                     byte b = (byte) input.read();
                     long now = System.currentTimeMillis();
                     Log.d(TAG, "Got command: " + Integer.toHexString(b));
