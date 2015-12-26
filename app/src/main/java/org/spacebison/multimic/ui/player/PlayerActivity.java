@@ -256,7 +256,16 @@ public class PlayerActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        super.onBackPressed();
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Exit player?");
+        builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                PlayerActivity.super.onBackPressed();
+            }
+        });
+        builder.setCancelable(true);
+        builder.show();
     }
 
     @Override
@@ -483,7 +492,7 @@ public class PlayerActivity extends AppCompatActivity {
             @Override
             protected Void doInBackground(Void... params) {
                 final int streamBufferSize = 1024;
-                final int maxCollectedSamples = 44100;
+                final int maxCollectedSamples = 88200;
                 long shortestLength = track.file.length();
 
                 for (Track t : sTracks) {
@@ -549,25 +558,11 @@ public class PlayerActivity extends AppCompatActivity {
                     }
 
                     Log.d(TAG, "Aliging track: " + t);
-                    int bestOffset = 0;
                     float bestScore = Float.MAX_VALUE;
-                    for (int offset = 0; offset < offsetRange; ++offset) {
-                        float score = 0;
-                        for (int sample = 0; sample < analyzedSamples; ++sample) {
-                            short modelSample = modelSamples[sample];
-                            short alignedSample = alignedSamples[offset + sample];
-                            int diff = modelSample - alignedSample;
-                            score += diff * diff;
-                        }
-
-                        if (score < bestScore) {
-                            bestScore = score;
-                            bestOffset = offset;
-                            Log.d(TAG, "Offset " + offset + " score " + score);
-                        }
-
-                        publishProgress(offset);
-                    }
+                    int bestOffset = getBestOffset(0, offsetRange, analyzedSamples, 16, modelSamples, alignedSamples, bestScore);
+                    Log.d(TAG, "First run offset:  " + bestOffset);
+                    bestOffset = getBestOffset(bestOffset - 8, bestOffset + 8, analyzedSamples, 1, modelSamples, alignedSamples, bestScore);
+                    Log.d(TAG, "Second run offset: " + bestOffset);
 
                     int offsetDiff = bestOffset * 2 - offsetRange;
                     Log.d(TAG, "Offset diff: " + offsetDiff);
@@ -575,6 +570,28 @@ public class PlayerActivity extends AppCompatActivity {
                 }
 
                 return null;
+            }
+
+            private int getBestOffset(int minOffset, int maxOffset, int analyzedSamples, int step, short[] modelSamples, short[] alignedSamples, float bestScore) {
+                int bestOffset = 0;
+                for (int offset = minOffset; offset < maxOffset; ++offset) {
+                    float score = 0;
+                    for (int sample = 0; sample < analyzedSamples; sample += step) {
+                        short modelSample = modelSamples[sample];
+                        short alignedSample = alignedSamples[offset + sample];
+                        int diff = modelSample - alignedSample;
+                        score += diff * diff;
+                    }
+
+                    if (score < bestScore) {
+                        bestScore = score;
+                        bestOffset = offset;
+                        Log.d(TAG, "Offset " + offset + " score " + score);
+                    }
+
+                    publishProgress(offset);
+                }
+                return bestOffset;
             }
 
             @Override
