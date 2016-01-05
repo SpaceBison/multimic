@@ -176,18 +176,13 @@ public class AudioRecordActivity extends Activity {
         builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                mMediaSenderRecorder.release();
+                mRefreshExecutor.shutdownNow();
                 finish();
                 dialog.dismiss();
             }
         });
         builder.setCancelable(true);
         builder.show();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        mMediaSenderRecorder.release();
-        mRefreshExecutor.shutdownNow();
     }
 }
