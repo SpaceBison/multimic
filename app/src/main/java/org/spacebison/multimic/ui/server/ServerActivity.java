@@ -56,7 +56,7 @@ public class ServerActivity extends AppCompatActivity {
             public void onPageSelected(int position) {
                 switch (position) {
                     case 0:
-                        mTracker.setScreenName("Server Record");
+                        mTracker.setScreenName("ListeningServer Record");
                         mTracker.send(new HitBuilders.ScreenViewBuilder().build());
                         break;
 

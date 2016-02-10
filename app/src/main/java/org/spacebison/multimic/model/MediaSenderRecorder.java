@@ -10,7 +10,6 @@ import org.spacebison.multimic.net.Client;
 import org.spacebison.multimic.net.OnCommandListener;
 import org.spacebison.multimic.net.OnConnectedListener;
 import org.spacebison.multimic.net.OnDisconnectedListener;
-import org.spacebison.multimic.net.Protocol;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -82,7 +81,7 @@ public class MediaSenderRecorder implements OnCommandListener {
     public void onCommand(byte command, long whenReceived) {
         Log.d(TAG, "Got command: " + Integer.toHexString(command));
         switch (command) {
-            case Protocol.START_RECORD:
+            case Config.START_RECORD:
                 //DataInputStream dis = new DataInputStream(mClient.getSocket().getInputStream());
                 //long startTime = dis.readLong();
                 //Log.d(TAG, "Record start time: " + new Date(startTime));
@@ -97,7 +96,7 @@ public class MediaSenderRecorder implements OnCommandListener {
                 onRecordingStarted();
                 break;
 
-            case Protocol.STOP_RECORD:
+            case Config.STOP_RECORD:
                 mAudioRecord.stop();
                 mAudioRecord.release();
                 mAudioRecord = null;
@@ -105,7 +104,7 @@ public class MediaSenderRecorder implements OnCommandListener {
                 onRecordingFinished();
                 break;
 
-            case Protocol.NTP_REQUEST:
+            case Config.NTP_REQUEST:
                 Log.d(TAG, "Got NTP request");
                 try {
                     mClient.sendNtpResponse(whenReceived);

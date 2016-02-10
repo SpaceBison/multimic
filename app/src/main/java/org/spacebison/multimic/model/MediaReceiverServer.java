@@ -14,10 +14,8 @@ import org.spacebison.multimic.net.OnConnectedListener;
 import org.spacebison.multimic.net.OnConnectionErrorListener;
 import org.spacebison.multimic.net.OnDisconnectedListener;
 import org.spacebison.multimic.net.OnSocketBytesTransferredListener;
-import org.spacebison.multimic.net.Protocol;
-import org.spacebison.multimic.net.Server;
+import org.spacebison.multimic.net.ListeningServer;
 import org.spacebison.multimic.net.discovery.MulticastServiceProvider;
-import org.spacebison.multimic.net.discovery.OnRequestReceivedListener;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -53,10 +51,10 @@ public class MediaReceiverServer {
 
     private MulticastServiceProvider mServiceProvider =
             new MulticastServiceProvider(
-                    Protocol.DISCOVERY_MULTICAST_GROUP,
-                    Protocol.DISCOVERY_MULTICAST_PORT,
-                    Protocol.SERVER_PORT);
-    private Server mServer = new Server(Protocol.SERVER_PORT);
+                    Config.DISCOVERY_MULTICAST_GROUP,
+                    Config.DISCOVERY_MULTICAST_PORT,
+                    Config.SERVER_PORT);
+    private ListeningServer mServer = new ListeningServer(Config.SERVER_PORT);
     private LinkedList<Socket> mClients = new LinkedList<>();
     private HashMap<Socket, Long> mClientDelays = new HashMap<>();
     private HashMap<Socket, Long> mClientTimeOffsets = new HashMap<>();
@@ -235,7 +233,7 @@ public class MediaReceiverServer {
                     long responseSent;
                     long responseReceived;
 
-                    os.write(Protocol.NTP_REQUEST);
+                    os.write(Config.NTP_REQUEST);
                     requestSent = System.currentTimeMillis();      // 1
                     responseSent = dis.readLong();                 // 3
                     requestReceived = dis.readLong();              // 2
@@ -244,14 +242,6 @@ public class MediaReceiverServer {
                     long delay = ((responseReceived - requestSent) - (responseSent - requestReceived));
                     long offset = ((requestReceived - requestSent) + (responseSent - requestReceived));
                     long timestampOffset = offset - delay;
-
-                    Log.d(TAG, "Request sent:      " + requestSent);
-                    Log.d(TAG, "Request received:  " + requestReceived);
-                    Log.d(TAG, "Response sent:     " + responseSent);
-                    Log.d(TAG, "Response received: " + responseReceived);
-                    Log.d(TAG, "Round trip delay: " + delay);
-                    Log.d(TAG, "Time offset:      " + offset);
-                    Log.d(TAG, "Offset - delay:   " + (offset - delay));
 
                     mClientTimeOffsets.put(socket, timestampOffset);
                     mClientDelays.put(socket, delay);
@@ -456,7 +446,7 @@ public class MediaReceiverServer {
 
         public void end() {
             try {
-                mClientOutput.write(Protocol.STOP_RECORD);
+                mClientOutput.write(Config.STOP_RECORD);
                 mClientOutput.flush();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -472,7 +462,7 @@ public class MediaReceiverServer {
                 byte[] buf = new byte[BUFFER_SIZE];
                 input = mSocket.getInputStream();
 
-                mClientOutput.write(Protocol.START_RECORD);
+                mClientOutput.write(Config.START_RECORD);
                 mClientOutput.flush();
 
                 int byteSum = 0;

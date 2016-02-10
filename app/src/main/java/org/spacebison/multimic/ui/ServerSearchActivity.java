@@ -15,9 +15,8 @@ import com.google.android.gms.analytics.Tracker;
 
 import org.spacebison.multimic.MultimicApplication;
 import org.spacebison.multimic.R;
-import org.spacebison.multimic.net.Protocol;
+import org.spacebison.multimic.model.Protocol;
 import org.spacebison.multimic.net.discovery.MulticastServiceResolver;
-import org.spacebison.multimic.net.discovery.OnServiceResolvedListener;
 
 import java.net.InetAddress;
 import java.util.LinkedList;
@@ -91,7 +90,7 @@ public class ServerSearchActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        mTracker.setScreenName("Server Search");
+        mTracker.setScreenName("ListeningServer Search");
         mTracker.send(new HitBuilders.ScreenViewBuilder().build());
     }
 
