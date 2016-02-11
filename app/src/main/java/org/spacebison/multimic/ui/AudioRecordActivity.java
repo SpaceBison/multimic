@@ -15,8 +15,6 @@ import org.spacebison.multimic.MultimicApplication;
 import org.spacebison.multimic.R;
 import org.spacebison.multimic.model.MediaSenderRecorder;
 import org.spacebison.multimic.model.RecordListener;
-import org.spacebison.multimic.net.OnConnectedListener;
-import org.spacebison.multimic.net.OnDisconnectedListener;
 
 import java.net.InetAddress;
 import java.net.Socket;

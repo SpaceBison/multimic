@@ -13,7 +13,6 @@ import android.widget.ListView;
 
 import org.spacebison.multimic.R;
 import org.spacebison.multimic.model.MediaReceiverServer;
-import org.spacebison.multimic.net.OnConnectedListener;
 
 import java.net.Socket;
 

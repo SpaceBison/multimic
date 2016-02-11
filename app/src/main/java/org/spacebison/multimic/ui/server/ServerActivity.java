@@ -18,8 +18,6 @@ import org.spacebison.multimic.MultimicApplication;
 import org.spacebison.multimic.R;
 import org.spacebison.multimic.model.MediaReceiverServer;
 import org.spacebison.multimic.model.RecordListener;
-import org.spacebison.multimic.net.OnConnectedListener;
-import org.spacebison.multimic.net.OnDisconnectedListener;
 
 import java.net.Socket;
 import java.util.ArrayList;

@@ -10,10 +10,6 @@ import android.util.Log;
 import org.spacebison.multimic.MultimicApplication;
 import org.spacebison.multimic.Util;
 import org.spacebison.multimic.audio.WavFileEncoder;
-import org.spacebison.multimic.net.OnConnectedListener;
-import org.spacebison.multimic.net.OnConnectionErrorListener;
-import org.spacebison.multimic.net.OnDisconnectedListener;
-import org.spacebison.multimic.net.OnSocketBytesTransferredListener;
 import org.spacebison.multimic.net.ListeningServer;
 import org.spacebison.multimic.net.discovery.MulticastServiceProvider;
 

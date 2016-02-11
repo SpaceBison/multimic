@@ -7,9 +7,6 @@ import android.util.Log;
 
 import org.spacebison.multimic.io.AudioRecordInputStream;
 import org.spacebison.multimic.net.Client;
-import org.spacebison.multimic.net.OnCommandListener;
-import org.spacebison.multimic.net.OnConnectedListener;
-import org.spacebison.multimic.net.OnDisconnectedListener;
 
 import java.io.IOException;
 import java.net.InetAddress;

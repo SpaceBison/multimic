@@ -10,7 +10,8 @@ public interface Message extends Serializable {
         START_RECORD,
         STOP_RECORD,
         NTP_REQUEST,
-        NTP_RESPONSE
+        NTP_RESPONSE,
+        HELLO
     }
 
     Type getType();
