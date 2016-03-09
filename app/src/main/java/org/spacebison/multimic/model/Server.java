@@ -13,4 +13,12 @@ public class Server {
         this.socket = socket;
         this.name = name;
     }
+
+    @Override
+    public String toString() {
+        return "Server{" +
+                "name='" + name + '\'' +
+                ", socket=" + socket +
+                '}';
+    }
 }

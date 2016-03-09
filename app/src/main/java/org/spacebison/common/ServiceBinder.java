@@ -13,7 +13,7 @@ public class ServiceBinder<T extends Service> extends Binder {
         mService = service;
     }
 
-    T getService() {
+    public T getService() {
         return mService;
     }
 }

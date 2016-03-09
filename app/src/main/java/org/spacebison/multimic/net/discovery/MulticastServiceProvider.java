@@ -1,5 +1,6 @@
 package org.spacebison.multimic.net.discovery;
 
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import org.spacebison.multimic.net.discovery.message.DiscoveryRequest;
@@ -14,6 +15,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -45,7 +47,7 @@ public class MulticastServiceProvider {
     }
 
     public void start() {
-        if (mServiceProviderTaskFuture != null) {
+        if (mServiceProviderTaskFuture == null) {
             mServiceProviderTaskFuture = mExecutor.submit(new ServiceProviderTask());
         }
     }
@@ -56,6 +58,21 @@ public class MulticastServiceProvider {
         }
     }
 
+    public ResolvedService getResovledService() {
+        InetAddress localHost = null;
+        try {
+            localHost = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+            Log.e(TAG, "Could not get localhost address: " + e);
+            Log.e(TAG, "Trying 127.0.0.1");
+            try {
+                localHost = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
+            } catch (UnknownHostException e1) {
+                Log.wtf(TAG, "Loopback address failed: " + e);
+            }
+        }
+        return buildResolvedService(localHost);
+    }
 
     private class ServiceProviderTask implements Runnable {
         @Override
@@ -79,7 +96,7 @@ public class MulticastServiceProvider {
                     socket.receive(packet);
 
                     ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(packet.getData(), packet.getOffset(), packet.getLength()));
-                    DiscoveryRequest request = (DiscoveryRequest) ois.readObject();
+                    final DiscoveryRequest request = (DiscoveryRequest) ois.readObject();
                     ois.close();
 
                     Log.d(TAG, "Received request from: " + packet.getAddress() + ": " + request);
@@ -92,30 +109,42 @@ public class MulticastServiceProvider {
                     mExecutor.execute(new Runnable() {
                         @Override
                         public void run() {
-                            try {
-                                DatagramSocket clientSocket = new DatagramSocket();
-                                clientSocket.connect(packet.getAddress(), packet.getPort());
 
-                                ResolvedService resolvedService = new ResolvedService(mName, mVersion, socket.getNetworkInterface().getInetAddresses().nextElement(), mServicePort);
+                            try {
+                                //clientSocket.connect(new InetSocketAddress(packet.getAddress(), packet.getPort()));
+
+                                ResolvedService resolvedService = buildResolvedService(socket.getNetworkInterface().getInetAddresses().nextElement());
+
                                 Log.d(TAG, "Sending response: " + resolvedService + " to " + packet.getAddress() + ':' + packet.getPort());
 
                                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                                 new ObjectOutputStream(bos).writeObject(resolvedService);
                                 byte[] responseBytes = bos.toByteArray();
-
-                                clientSocket.send(new DatagramPacket(responseBytes, responseBytes.length));
-                                clientSocket.close();
                                 bos.close();
+
+                                DatagramPacket responsePacket = new DatagramPacket(responseBytes, responseBytes.length);
+                                responsePacket.setAddress(packet.getAddress());
+                                responsePacket.setPort(packet.getPort());
+
+                                DatagramSocket clientSocket = new DatagramSocket();
+                                clientSocket.send(responsePacket);
+                                clientSocket.close();
                             } catch (IOException e) {
                                 Log.e(TAG, "Error sending response: " + e);
                             }
                         }
                     });
                 } catch (IOException | ClassNotFoundException e) {
-                    Log.w(TAG, e.toString());
+                    Log.w(TAG, "Warning providing service info: " + e);
                 }
             }
             socket.close();
+            mServiceProviderTaskFuture = null;
         }
+    }
+
+    @NonNull
+    private ResolvedService buildResolvedService(InetAddress address) {
+        return new ResolvedService(mName, mVersion, address, mServicePort);
     }
 }

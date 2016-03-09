@@ -14,11 +14,9 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -54,7 +52,7 @@ public class MulticastServiceResolver {
         mExecutor.execute(new ResolveServiceTask(timeout, true));
     }
 
-    private class ReceiveResponseCall implements Callable<List<ResolvedService>> {
+    private class ReceiveResponseCall implements Callable<Set<ResolvedService>> {
         private final DatagramSocket mSocket;
         private final boolean mResolveOne;
         private final int mTimeout;
@@ -66,8 +64,8 @@ public class MulticastServiceResolver {
         }
 
         @Override
-        public List<ResolvedService> call() throws Exception {
-            LinkedList<ResolvedService> resolvedServices = new LinkedList<>();
+        public Set<ResolvedService> call() throws Exception {
+            HashSet<ResolvedService> resolvedServices = new HashSet<>();
             long endTime = System.currentTimeMillis() + mTimeout;
 
             DatagramPacket packet = new DatagramPacket(new byte[Common.MAX_PACKET_SIZE], Common.MAX_PACKET_SIZE);
@@ -78,6 +76,8 @@ public class MulticastServiceResolver {
                 Log.e(TAG, "Error setting timeout: " + e);
                 return null;
             }
+
+            Log.d(TAG, "Listening for a response on: " + mSocket.getLocalAddress() + ':' + mSocket.getLocalPort());
 
             while (!Thread.interrupted() && System.currentTimeMillis() < endTime) {
                 try {
@@ -92,13 +92,15 @@ public class MulticastServiceResolver {
                     resolvedServices.add(service);
 
                     if (mResolveOne) {
+                        Log.d(TAG, "Resolved one service");
                         return resolvedServices;
                     }
                 } catch (IOException e) {
-                    Log.w(TAG, e.toString());
+                    Log.w(TAG, "Warning receiving response: " + e);
                 }
             }
 
+            Log.d(TAG, "Resolved " + resolvedServices.size() + " services");
             return resolvedServices;
         }
     }
@@ -117,30 +119,38 @@ public class MulticastServiceResolver {
             DatagramSocket socket = null;
             try {
                 socket = new DatagramSocket();
-                socket.connect(InetAddress.getByName(mMulticastAddress), mMulticastPort);
-            } catch (UnknownHostException | SocketException e) {
+                //socket.connect(InetAddress.getByName(mMulticastAddress), mMulticastPort);
+            } catch (SocketException e) {
                 Log.e(TAG, "Could not connect to multicast " + mMulticastAddress + ':' + mMulticastPort);
                 return;
             }
 
-            Future<List<ResolvedService>> resolvedServicesFuture =
+            Future<Set<ResolvedService>> resolvedServicesFuture =
                     mExecutor.submit(new ReceiveResponseCall(socket, mResolveOne, mTimeout));
+
+
+            Log.d(TAG, "Sending request");
 
             try {
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 new ObjectOutputStream(bos).writeObject(new DiscoveryRequest(mVersion));
                 byte[] responseBytes = bos.toByteArray();
-
-                socket.send(new DatagramPacket(responseBytes, responseBytes.length));
                 bos.close();
+
+                DatagramPacket packet = new DatagramPacket(responseBytes, responseBytes.length);
+                packet.setAddress(InetAddress.getByName(mMulticastAddress));
+                packet.setPort(mMulticastPort);
+
+                socket.send(packet);
             } catch (IOException e) {
                 Log.e(TAG, "Error sending request: " + e);
             }
 
-            List<ResolvedService> resolvedServices = null;
+            Set<ResolvedService> resolvedServices = null;
             try {
                  resolvedServices = resolvedServicesFuture.get();
-            } catch (InterruptedException | ExecutionException e) {
+                //resolvedServices = new ReceiveResponseCall(socket, mResolveOne, mTimeout).call();
+            } catch (Exception e) {
                 e.printStackTrace();
             }
 
@@ -149,6 +159,6 @@ public class MulticastServiceResolver {
     }
 
     public interface Listener {
-        void onServicesResolved(List<ResolvedService> services);
+        void onServicesResolved(Set<ResolvedService> services);
     }
 }

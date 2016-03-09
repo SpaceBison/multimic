@@ -8,10 +8,14 @@ import java.io.Serializable;
 public class DiscoveryRequest implements Serializable {
     public int version = 1;
 
-    public DiscoveryRequest() {
-    }
-
     public DiscoveryRequest(int version) {
         this.version = version;
+    }
+
+    @Override
+    public String toString() {
+        return "DiscoveryRequest{" +
+                "version=" + version +
+                '}';
     }
 }

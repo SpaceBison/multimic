@@ -1,44 +1,60 @@
 package org.spacebison.multimic.ui;
 
+import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
+import android.os.IBinder;
+import android.os.Messenger;
+import android.util.Log;
 import android.view.View;
 
-import com.google.android.gms.analytics.HitBuilders;
-import com.google.android.gms.analytics.Tracker;
-
-import org.spacebison.multimic.MultimicApplication;
+import org.spacebison.multimic.MultimicService;
 import org.spacebison.multimic.R;
-import org.spacebison.multimic.ui.player.PlayerListActivity;
-import org.spacebison.multimic.ui.server.ServerActivity;
+import org.spacebison.multimic.ToastServiceBroadcastReceiver;
 
-public class MainActivity extends AppCompatActivity {
-    private Tracker mTracker;
+public class MainActivity extends Activity implements ServiceConnection {
+    private static final String TAG = "MainActivity";
+    private final ToastServiceBroadcastReceiver mServiceListener = new ToastServiceBroadcastReceiver();
+    private Messenger mService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mTracker = MultimicApplication.getDefaultTracker();
+
+        mServiceListener.register(this);
+
+        Log.d(TAG, "Bind service");
+        if (!bindService(new Intent(this, MultimicService.class), this, BIND_AUTO_CREATE)) {
+            Log.e(TAG, "Did not bind");
+        }
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        mTracker.setScreenName("Main");
-        mTracker.send(new HitBuilders.ScreenViewBuilder().build());
+    protected void onDestroy() {
+        super.onDestroy();
+        unbindService(this);
+        mServiceListener.unregister(this);
     }
 
-    public void clickClient(View view) {
-        startActivity(new Intent(MainActivity.this, ServerSearchActivity.class));
+    public void onServerClick(View view) {
+        startActivity(new Intent(this, ServerActivity.class));
     }
 
-    public void clickServer(View view) {
-        startActivity(new Intent(MainActivity.this, ServerActivity.class));
+    @Override
+    public void onServiceConnected(ComponentName name, IBinder service) {
+        Log.d(TAG, "Service connected: " + name);
+        mService = new Messenger(service);
     }
 
-    public void clickPlayer(View view) {
-        startActivity(new Intent(MainActivity.this, PlayerListActivity.class));
+    @Override
+    public void onServiceDisconnected(ComponentName name) {
+        mService = null;
+    }
+
+    public void onServerSearchClick(View view) {
+        startActivity(new Intent(this, ServerSearchActivity.class));
     }
 }

@@ -28,22 +28,24 @@ public class WavFileEncoder {
         return sInstance;
     }
 
-    public void encode(File rawFile) {
-        mExecutor.execute(new EncodeRunnable(rawFile));
+    public void encode(File input, File output) {
+        mExecutor.execute(new EncodeRunnable(input, output));
     }
 
     private WavFileEncoder() {}
 
     private class EncodeRunnable implements Runnable {
-        private File mRawFile;
+        private File mInput;
+        private File mOutput;
 
-        public EncodeRunnable(File rawFile) {
-            mRawFile = rawFile;
+        public EncodeRunnable(File input, File output) {
+            mInput = input;
+            mOutput = output;
         }
 
         @Override
         public void run() {
-            String wavFileName = mRawFile.getName();
+            String wavFileName = mInput.getName();
             int dotIndex = wavFileName.lastIndexOf('.');
 
             if (dotIndex == -1) {
@@ -52,21 +54,19 @@ public class WavFileEncoder {
                 wavFileName = wavFileName.substring(0, dotIndex) + ".wav";
             }
 
-            File wavFile = new File(mRawFile.getParentFile(), wavFileName);
-
-            Log.i(TAG, "Encoding " + mRawFile.getAbsolutePath() + " as " + wavFile.getAbsolutePath());
+            Log.i(TAG, "Encoding " + mInput.getAbsolutePath() + " as " + mOutput.getAbsolutePath());
 
             try {
-                WavUtils.makeWavFile(mRawFile, (short)1, 44100, (short)16, wavFile);
+                WavUtils.makeWavFile(mInput, (short)1, 44100, (short)16, mOutput);
             } catch (IOException e) {
-                Log.e(TAG, "Could not encode file " + mRawFile.getName() + ": " + e);
+                Log.e(TAG, "Could not encode file " + mInput.getName() + ": " + e);
             }
 
-            Log.i(TAG, "Encoded file " + wavFile.getAbsolutePath());
+            Log.i(TAG, "Encoded file " + mOutput.getAbsolutePath());
 
-            boolean deleted = mRawFile.delete();
+            boolean deleted = mInput.delete();
 
-            Log.i(TAG, "Deleted raw file " + mRawFile.getName() + ": " + (deleted ? "Success" : "Failure"));
+            Log.i(TAG, "Deleted raw file " + mInput.getName() + ": " + (deleted ? "Success" : "Failure"));
         }
     }
 }

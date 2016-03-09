@@ -17,4 +17,12 @@ public class Client {
         this.timeOffset = timeOffset;
         this.delay = delay;
     }
+
+    @Override
+    public String toString() {
+        return "Client{" +
+                "name='" + name + '\'' +
+                ", socket=" + socket +
+                '}';
+    }
 }
