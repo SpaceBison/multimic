@@ -1,7 +1,8 @@
 package org.spacebison.multimic.net.discovery;
 
+import android.os.NetworkOnMainThreadException;
 import android.support.annotation.NonNull;
-import android.util.Log;
+import org.spacebison.common.CrashlyticsLog;
 
 import org.spacebison.multimic.net.discovery.message.DiscoveryRequest;
 import org.spacebison.multimic.net.discovery.message.ResolvedService;
@@ -15,6 +16,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -62,13 +64,13 @@ public class MulticastServiceProvider {
         InetAddress localHost = null;
         try {
             localHost = InetAddress.getLocalHost();
-        } catch (UnknownHostException e) {
-            Log.e(TAG, "Could not get localhost address: " + e);
-            Log.e(TAG, "Trying 127.0.0.1");
+        } catch (UnknownHostException | NetworkOnMainThreadException e) {
+            CrashlyticsLog.e(TAG, "Could not get localhost address: " + e);
+            CrashlyticsLog.e(TAG, "Trying 127.0.0.1");
             try {
                 localHost = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
             } catch (UnknownHostException e1) {
-                Log.wtf(TAG, "Loopback address failed: " + e);
+                CrashlyticsLog.wtf(TAG, "Loopback address failed: " + e);
             }
         }
         return buildResolvedService(localHost);
@@ -83,11 +85,11 @@ public class MulticastServiceProvider {
                 socket.joinGroup(InetAddress.getByName(mAddress));
                 socket.setSoTimeout(TIMEOUT);
             } catch (IOException e) {
-                Log.e(TAG, "Could not start listening: " + e);
+                CrashlyticsLog.e(TAG, "Could not start listening: " + e);
                 return;
             }
 
-            Log.d(TAG, "Listening: " + mAddress + ':' + socket.getLocalPort());
+            CrashlyticsLog.d(TAG, "Listening: " + mAddress + ':' + socket.getLocalPort());
 
             final DatagramPacket packet = new DatagramPacket(new byte[Common.MAX_PACKET_SIZE], Common.MAX_PACKET_SIZE);
 
@@ -99,10 +101,10 @@ public class MulticastServiceProvider {
                     final DiscoveryRequest request = (DiscoveryRequest) ois.readObject();
                     ois.close();
 
-                    Log.d(TAG, "Received request from: " + packet.getAddress() + ": " + request);
+                    CrashlyticsLog.d(TAG, "Received request from: " + packet.getAddress() + ": " + request);
 
                     if (request.version > mVersion) {
-                        Log.w(TAG, "Got request for a higher version, dropping");
+                        CrashlyticsLog.w(TAG, "Got request for a higher version, dropping");
                         continue;
                     }
 
@@ -115,7 +117,7 @@ public class MulticastServiceProvider {
 
                                 ResolvedService resolvedService = buildResolvedService(socket.getNetworkInterface().getInetAddresses().nextElement());
 
-                                Log.d(TAG, "Sending response: " + resolvedService + " to " + packet.getAddress() + ':' + packet.getPort());
+                                CrashlyticsLog.d(TAG, "Sending response: " + resolvedService + " to " + packet.getAddress() + ':' + packet.getPort());
 
                                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                                 new ObjectOutputStream(bos).writeObject(resolvedService);
@@ -130,12 +132,13 @@ public class MulticastServiceProvider {
                                 clientSocket.send(responsePacket);
                                 clientSocket.close();
                             } catch (IOException e) {
-                                Log.e(TAG, "Error sending response: " + e);
+                                CrashlyticsLog.e(TAG, "Error sending response: " + e);
                             }
                         }
                     });
+                } catch (SocketTimeoutException ignored) {
                 } catch (IOException | ClassNotFoundException e) {
-                    Log.w(TAG, "Warning providing service info: " + e);
+                    CrashlyticsLog.w(TAG, "Warning providing service info: " + e);
                 }
             }
             socket.close();

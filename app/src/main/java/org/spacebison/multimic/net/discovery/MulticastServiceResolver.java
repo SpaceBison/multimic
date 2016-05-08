@@ -1,6 +1,6 @@
 package org.spacebison.multimic.net.discovery;
 
-import android.util.Log;
+import org.spacebison.common.CrashlyticsLog;
 
 import org.spacebison.multimic.net.discovery.message.DiscoveryRequest;
 import org.spacebison.multimic.net.discovery.message.ResolvedService;
@@ -73,11 +73,11 @@ public class MulticastServiceResolver {
             try {
                 mSocket.setSoTimeout(mTimeout);
             } catch (IOException e) {
-                Log.e(TAG, "Error setting timeout: " + e);
+                CrashlyticsLog.e(TAG, "Error setting timeout: " + e);
                 return null;
             }
 
-            Log.d(TAG, "Listening for a response on: " + mSocket.getLocalAddress() + ':' + mSocket.getLocalPort());
+            CrashlyticsLog.d(TAG, "Listening for a response on: " + mSocket.getLocalAddress() + ':' + mSocket.getLocalPort());
 
             while (!Thread.interrupted() && System.currentTimeMillis() < endTime) {
                 try {
@@ -87,20 +87,20 @@ public class MulticastServiceResolver {
                     ResolvedService service = (ResolvedService) ois.readObject();
                     ois.close();
 
-                    Log.d(TAG, "Received response from " + packet.getAddress() + ": " + service);
+                    CrashlyticsLog.d(TAG, "Received response from " + packet.getAddress() + ": " + service);
 
                     resolvedServices.add(service);
 
                     if (mResolveOne) {
-                        Log.d(TAG, "Resolved one service");
+                        CrashlyticsLog.d(TAG, "Resolved one service");
                         return resolvedServices;
                     }
                 } catch (IOException e) {
-                    Log.w(TAG, "Warning receiving response: " + e);
+                    CrashlyticsLog.w(TAG, "Warning receiving response: " + e);
                 }
             }
 
-            Log.d(TAG, "Resolved " + resolvedServices.size() + " services");
+            CrashlyticsLog.d(TAG, "Resolved " + resolvedServices.size() + " services");
             return resolvedServices;
         }
     }
@@ -121,7 +121,7 @@ public class MulticastServiceResolver {
                 socket = new DatagramSocket();
                 //socket.connect(InetAddress.getByName(mMulticastAddress), mMulticastPort);
             } catch (SocketException e) {
-                Log.e(TAG, "Could not connect to multicast " + mMulticastAddress + ':' + mMulticastPort);
+                CrashlyticsLog.e(TAG, "Could not connect to multicast " + mMulticastAddress + ':' + mMulticastPort);
                 return;
             }
 
@@ -129,7 +129,7 @@ public class MulticastServiceResolver {
                     mExecutor.submit(new ReceiveResponseCall(socket, mResolveOne, mTimeout));
 
 
-            Log.d(TAG, "Sending request");
+            CrashlyticsLog.d(TAG, "Sending request");
 
             try {
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -143,7 +143,7 @@ public class MulticastServiceResolver {
 
                 socket.send(packet);
             } catch (IOException e) {
-                Log.e(TAG, "Error sending request: " + e);
+                CrashlyticsLog.e(TAG, "Error sending request: " + e);
             }
 
             Set<ResolvedService> resolvedServices = null;

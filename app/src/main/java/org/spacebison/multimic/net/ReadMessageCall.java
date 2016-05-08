@@ -1,6 +1,6 @@
 package org.spacebison.multimic.net;
 
-import android.util.Log;
+import org.spacebison.common.CrashlyticsLog;
 
 import org.spacebison.multimic.net.message.Message;
 
@@ -26,7 +26,7 @@ public class ReadMessageCall<T extends Message> implements Callable<T> {
             ObjectInputStream ois = new ObjectInputStream(mSocket.getInputStream());
             return (T) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
-            Log.e(TAG, "NTP Error: " + e);
+            CrashlyticsLog.e(TAG, "NTP Error: " + e);
             return null;
         }
     }

@@ -1,4 +1,4 @@
-package org.spacebison.multimic;
+package org.spacebison.common;
 
 import android.content.Context;
 import android.content.res.Resources;
@@ -46,5 +46,13 @@ public class Util {
         Resources.Theme theme = context.getTheme();
         theme.resolveAttribute(attrId, typedValue, true);
         return typedValue.data;
+    }
+
+    public static String getFullName(Context ctx, Enum e) {
+        return ctx.getPackageName() + '.' + e.name();
+    }
+
+    public static String getSimpleName(String name) {
+        return name.substring(name.lastIndexOf('.'));
     }
 }

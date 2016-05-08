@@ -1,8 +1,9 @@
 package org.spacebison.multimic;
 
 import android.content.Context;
-import android.util.Log;
 import android.widget.Toast;
+
+import org.spacebison.common.CrashlyticsLog;
 
 /**
  * Created by cmb on 06.03.16.
@@ -35,7 +36,7 @@ public class ToastServiceBroadcastReceiver extends ServiceBroadcastReceiver {
     }
 
     private void showToast(Context context, String text) {
-        Log.d(TAG, text);
+        CrashlyticsLog.d(TAG, text);
         Toast.makeText(context, text, Toast.LENGTH_SHORT).show();
     }
 }

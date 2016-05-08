@@ -4,12 +4,17 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
+import org.spacebison.common.Util;
+import org.spacebison.multimic.model.ClientService;
+import org.spacebison.multimic.model.ServerService;
+
 /**
  * Created by cmb on 05.03.16.
  */
 public abstract class ServiceBroadcastReceiver extends BroadcastReceiver {
     public void register(Context context) {
-        context.registerReceiver(this, MultimicService.getIntentFilter());
+        context.registerReceiver(this, ServerService.getIntentFilter(context));
+        context.registerReceiver(this, ClientService.getIntentFilter(context));
     }
 
     public void unregister(Context context) {
@@ -18,23 +23,61 @@ public abstract class ServiceBroadcastReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        switch (intent.getAction()) {
-            case MultimicService.ACTION_CONNECTED:
-                onConnected(context, intent.getStringExtra(MultimicService.EXTRA_SERVER_NAME));
-                break;
-
-            case MultimicService.ACTION_DISCONNECTED:
-                onDisconnected(context, intent.getStringExtra(MultimicService.EXTRA_SERVER_NAME));
-                break;
-
-            case MultimicService.ACTION_CLIENT_CONNECTED:
-                onClientConnected(context, intent.getStringExtra(MultimicService.EXTRA_CLIENT_NAME));
-                break;
-
-            case MultimicService.ACTION_CLIENT_DISCONNECTED:
-                onClientDisconnected(context, intent.getStringExtra(MultimicService.EXTRA_CLIENT_NAME));
-                break;
+        if (receiveClient(context, intent)) {
+            return;
         }
+
+        receiveServer(context, intent);
+    }
+
+    private boolean receiveServer(Context context, Intent intent) {
+        ServerService.Action serviceAction;
+        try {
+            serviceAction = ServerService.Action.valueOf(intent.getAction());
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+
+        switch (serviceAction) {
+            case CLIENT_CONNECTED:
+                onClientConnected(context, intent.getStringExtra(Util.getFullName(context, ServerService.Extra.CLIENT)));
+                break;
+
+            case CLIENT_DISCONNECTED:
+                onClientDisconnected(context, intent.getStringExtra(Util.getFullName(context, ServerService.Extra.CLIENT)));
+                break;
+
+            default:
+                return false;
+        }
+
+        return true;
+    }
+
+    private boolean receiveClient(Context context, Intent intent) {
+        ClientService.Action serviceAction;
+        try {
+            serviceAction = ClientService.Action.valueOf(intent.getAction());
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+
+        switch (serviceAction) {
+            case CONNECTED:
+                onConnected(context, intent.getStringExtra(Util.getFullName(context, ClientService.Extra.SERVER)));
+                break;
+
+            case RECORDING_STARTED:
+                break;
+
+            case TRANSFER_COMPLETED:
+                break;
+
+            default:
+                return false;
+        }
+
+        return true;
     }
 
     public abstract void onConnected(Context context, String serverName);

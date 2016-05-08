@@ -1,6 +1,6 @@
 package org.spacebison.multimic.audio;
 
-import android.util.Log;
+import org.spacebison.common.CrashlyticsLog;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,19 +54,19 @@ public class WavFileEncoder {
                 wavFileName = wavFileName.substring(0, dotIndex) + ".wav";
             }
 
-            Log.i(TAG, "Encoding " + mInput.getAbsolutePath() + " as " + mOutput.getAbsolutePath());
+            CrashlyticsLog.i(TAG, "Encoding " + mInput.getAbsolutePath() + " as " + mOutput.getAbsolutePath());
 
             try {
                 WavUtils.makeWavFile(mInput, (short)1, 44100, (short)16, mOutput);
             } catch (IOException e) {
-                Log.e(TAG, "Could not encode file " + mInput.getName() + ": " + e);
+                CrashlyticsLog.e(TAG, "Could not encode file " + mInput.getName() + ": " + e);
             }
 
-            Log.i(TAG, "Encoded file " + mOutput.getAbsolutePath());
+            CrashlyticsLog.i(TAG, "Encoded file " + mOutput.getAbsolutePath());
 
             boolean deleted = mInput.delete();
 
-            Log.i(TAG, "Deleted raw file " + mInput.getName() + ": " + (deleted ? "Success" : "Failure"));
+            CrashlyticsLog.i(TAG, "Deleted raw file " + mInput.getName() + ": " + (deleted ? "Success" : "Failure"));
         }
     }
 }

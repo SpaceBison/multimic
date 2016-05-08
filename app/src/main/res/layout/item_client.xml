@@ -5,40 +5,20 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingTop="10dp"
         android:paddingBottom="10dp"
-        android:paddingRight="10dp"
+        android:paddingRight="20dp"
         android:paddingLeft="20dp"
-        android:orientation="vertical"
-        android:gravity="center_vertical">
-
-    <TextView
-        android:id="@+id/name"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1"
         android:singleLine="true"
         android:ellipsize="marquee"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="@color/textColor"
         android:text="NAME"/>
-
-    <TextView
-        android:id="@+id/address"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:singleLine="true"
-        android:ellipsize="marquee"
-        android:textSize="16sp"
-        android:textColor="@color/textColorSecondary"
-        android:text="address"/>
-
-    </LinearLayout>
 
     <View
         android:layout_width="match_parent"

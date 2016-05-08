@@ -1,6 +1,6 @@
 package org.spacebison.multimic.net;
 
-import android.util.Log;
+import org.spacebison.common.CrashlyticsLog;
 
 import org.spacebison.multimic.gson.GsonHelper;
 import org.spacebison.multimic.io.JsonInputStream;
@@ -25,7 +25,7 @@ public class ReadJsonCall<T> implements Callable<T> {
     @Override
     public T call() throws IOException {
         synchronized (mInputStream) {
-            Log.v(TAG, "Reading json");
+            CrashlyticsLog.v(TAG, "Reading json");
             JsonInputStream jsonInputStream = new JsonInputStream(mInputStream, GsonHelper.getGson());
             return jsonInputStream.readJsonObject(mObjectClass);
         }

@@ -1,12 +1,15 @@
 package org.spacebison.multimic.net.discovery.message;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import java.io.Serializable;
 import java.net.InetAddress;
 
 /**
  * Created by cmb on 24.10.15.
  */
-public class ResolvedService implements Serializable {
+public class ResolvedService implements Serializable, Parcelable {
     public String name;
     public int version;
     public InetAddress address;
@@ -46,4 +49,37 @@ public class ResolvedService implements Serializable {
     public String toString() {
         return "ResolvedService{" + name + "; ver. " + version + "; " + address + ':' + port + '}';
     }
+
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(this.name);
+        dest.writeInt(this.version);
+        dest.writeSerializable(this.address);
+        dest.writeInt(this.port);
+    }
+
+    protected ResolvedService(Parcel in) {
+        this.name = in.readString();
+        this.version = in.readInt();
+        this.address = (InetAddress) in.readSerializable();
+        this.port = in.readInt();
+    }
+
+    public static final Parcelable.Creator<ResolvedService> CREATOR = new Parcelable.Creator<ResolvedService>() {
+        @Override
+        public ResolvedService createFromParcel(Parcel source) {
+            return new ResolvedService(source);
+        }
+
+        @Override
+        public ResolvedService[] newArray(int size) {
+            return new ResolvedService[size];
+        }
+    };
 }

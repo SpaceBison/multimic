@@ -2,13 +2,16 @@ package org.spacebison.multimic;
 
 import android.app.Application;
 import android.content.Context;
-import android.util.Log;
-
+import com.crashlytics.android.Crashlytics;
 import com.google.android.gms.analytics.ExceptionReporter;
 import com.google.android.gms.analytics.GoogleAnalytics;
 import com.google.android.gms.analytics.Tracker;
 
+import org.spacebison.common.CrashlyticsLog;
+
 import java.util.concurrent.ThreadFactory;
+
+import io.fabric.sdk.android.Fabric;
 
 /**
  * Created by cmb on 04.12.15.
@@ -23,12 +26,13 @@ public class MultimicApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        Fabric.with(this, new Crashlytics());
         sApplicationContext = this;
 
         try {
             LOCK.notifyAll();
         } catch (IllegalMonitorStateException e) {
-            Log.w(TAG, e.toString());
+            CrashlyticsLog.w(TAG, e.toString());
         }
 
         Thread.UncaughtExceptionHandler handler = new ExceptionReporter(
@@ -37,6 +41,7 @@ public class MultimicApplication extends Application {
                 this);                                         // Context of the application.
 
         Thread.setDefaultUncaughtExceptionHandler(handler);
+        new ToastServiceBroadcastReceiver().register(this);
     }
 
     

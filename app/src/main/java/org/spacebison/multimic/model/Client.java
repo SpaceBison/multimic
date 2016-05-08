@@ -1,11 +1,12 @@
 package org.spacebison.multimic.model;
 
+import java.io.Serializable;
 import java.net.Socket;
 
 /**
  * Created by cmb on 11.02.16.
  */
-public class Client {
+public class Client implements Serializable {
     public Socket socket;
     public String name;
     public long timeOffset;

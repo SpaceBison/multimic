@@ -14,19 +14,17 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="false"
-        android:theme="@style/AppTheme.NoActionBar">
+        android:theme="@style/AppTheme">
+
         <activity
-            android:name=".ui.MainActivity">
+            android:name=".ui.MainActivity"
+            android:label="@string/app_name"
+            android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
-
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-
-        <service
-            android:name=".MultimicService"
-            android:process=":MultimicService"/>
 
         <!-- Google Analytics -->
         <meta-data
@@ -58,24 +56,23 @@
             android:exported="false"/>
 
         <activity
-            android:name=".ui.ServerSearchActivity"/>
+            android:name=".ui.ServerSearchActivity"
+            android:label="Server search"/>
 
         <activity
             android:name=".ui.ClientActivity"/>
 
-        <receiver
-            android:name=".ToastServiceBroadcastReceiver">
-            <intent-filter>
-                <action android:name="org.spacebison.multimic.ACTION_CONNECTED"/>
-                <action android:name="org.spacebison.multimic.ACTION_DISCONNECTED"/>
-                <action android:name="org.spacebison.multimic.ACTION_CLIENT_CONNECTED"/>
-                <action android:name="org.spacebison.multimic.ACTION_CLIENT_DISCONNECTED"/>
-            </intent-filter>
-        </receiver>
-
         <activity
-            android:name=".ui.ServerActivity"/>
+            android:name=".ui.ServerActivity"
+            android:label="Recocrder"
+            android:theme="@style/AppTheme.NoActionBar"/>
 
+        <service android:name=".model.ClientService"/>
+        <service android:name=".model.ServerService"/>
+
+        <meta-data
+            android:name="io.fabric.ApiKey"
+            android:value="ee6f4a84a024ba5df48c32c60245c9c81d3c8d84" />
     </application>
 
 </manifest>

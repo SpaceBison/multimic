@@ -1,6 +1,6 @@
 package org.spacebison.multimic.net;
 
-import android.util.Log;
+import org.spacebison.common.CrashlyticsLog;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -68,7 +68,7 @@ public class ListeningServer {
                 }
             });
         } else {
-            Log.d(TAG, "No listener, dropping the new connection: " + socket.getInetAddress());
+            CrashlyticsLog.d(TAG, "No listener, dropping the new connection: " + socket.getInetAddress());
             mExecutor.execute(new Runnable() {
                 @Override
                 public void run() {
@@ -95,28 +95,28 @@ public class ListeningServer {
 
         @Override
         public void run() {
-            Log.d(TAG, "Starting thread: " + getName());
+            CrashlyticsLog.d(TAG, "Starting thread: " + getName());
             try {
                 mServerSocket = new ServerSocket(mPort);
             } catch (IOException e) {
-                Log.e(TAG, "Error starting server: " + e.toString());
+                CrashlyticsLog.e(TAG, "Error starting server: " + e.toString());
                 return;
             }
 
-            Log.d(TAG, "Listening on port " + mPort);
+            CrashlyticsLog.d(TAG, "Listening on port " + mPort);
 
             while (!isInterrupted()) {
                 try {
                     final Socket socket = mServerSocket.accept();
-                    Log.d(TAG, "Accepted: " + socket.getInetAddress());
+                    CrashlyticsLog.d(TAG, "Accepted: " + socket.getInetAddress());
                     onConnected(socket);
                 } catch (final IOException e) {
-                    Log.w(TAG, e.toString());
+                    CrashlyticsLog.w(TAG, e.toString());
                     onListeningError(e);
                 }
             }
 
-            Log.d(TAG, "Closed");
+            CrashlyticsLog.d(TAG, "Closed");
         }
 
         public void release() {

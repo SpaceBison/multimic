@@ -1,6 +1,6 @@
 package org.spacebison.multimic.audio;
 
-import android.util.Log;
+import org.spacebison.common.CrashlyticsLog;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -90,7 +90,7 @@ public class WavUtils {
 
         inputStream.read(intArray);
         // TODO: don't ignore this stuff
-        Log.d("RIFF", "Skipping next " + 36 + " bytes");
+        CrashlyticsLog.d("RIFF", "Skipping next " + 36 + " bytes");
         inputStream.skip(36);
 
         return header;

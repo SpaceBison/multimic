@@ -1,6 +1,6 @@
 package org.spacebison.multimic.io;
 
-import android.util.Log;
+import org.spacebison.common.CrashlyticsLog;
 
 import org.spacebison.multimic.model.Config;
 
@@ -42,7 +42,7 @@ public class StreamForwardTask implements Runnable {
                 mListener.onStreamForwardFinished();
             }
         } catch (IOException e) {
-            Log.e(TAG, "Error forwarding " + mInputStream + " to " + mOutputStream);
+            CrashlyticsLog.e(TAG, "Error forwarding " + mInputStream + " to " + mOutputStream);
             if (mListener != null) {
                 mListener.onStreamForwardError();
             }

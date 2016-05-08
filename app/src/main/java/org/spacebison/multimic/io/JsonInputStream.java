@@ -1,6 +1,6 @@
 package org.spacebison.multimic.io;
 
-import android.util.Log;
+import org.spacebison.common.CrashlyticsLog;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -32,7 +32,7 @@ public class JsonInputStream extends FilterInputStream {
         try {
             reader = new InputStreamReader(inputStream, "UTF-8");
         } catch (UnsupportedEncodingException e) {
-            Log.w(TAG, e.toString());
+            CrashlyticsLog.w(TAG, e.toString());
             reader = new InputStreamReader(inputStream);
         } finally {
             mReader = reader;
@@ -47,7 +47,7 @@ public class JsonInputStream extends FilterInputStream {
             appendLine(builder);
             try {
                 object = mGson.fromJson(builder.toString(), classOfT);
-                Log.v(TAG, "Read json: " + builder);
+                CrashlyticsLog.v(TAG, "Read json: " + builder);
             } catch (JsonSyntaxException e) {
             }
         } while (object == null);

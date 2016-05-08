@@ -1,6 +1,6 @@
 package org.spacebison.multimic.net;
 
-import android.util.Log;
+import org.spacebison.common.CrashlyticsLog;
 
 import org.spacebison.multimic.io.JsonOutputStream;
 
@@ -24,7 +24,7 @@ public class WriteJsonTask implements Runnable {
     public void run() {
         synchronized (mOutputStream) {
             try {
-                Log.v(TAG, "Writing " + mObject);
+                CrashlyticsLog.v(TAG, "Writing " + mObject);
                 JsonOutputStream output = new JsonOutputStream(mOutputStream);
                 output.write(mObject);
                 output.flush();
