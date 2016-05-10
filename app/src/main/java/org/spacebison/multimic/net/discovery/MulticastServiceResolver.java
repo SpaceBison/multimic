@@ -89,6 +89,12 @@ public class MulticastServiceResolver {
 
                     CrashlyticsLog.d(TAG, "Received response from " + packet.getAddress() + ": " + service);
 
+                    if (service.address.isAnyLocalAddress()) {
+                        CrashlyticsLog.w(TAG, "Server returned local address: " + service.address);
+                        service.address = packet.getAddress();
+                        CrashlyticsLog.i(TAG, "Using packet address: "  + service.address);
+                    }
+
                     resolvedServices.add(service);
 
                     if (mResolveOne) {

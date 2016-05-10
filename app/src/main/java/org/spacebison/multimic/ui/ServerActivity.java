@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Messenger;
 import android.os.RemoteException;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -18,6 +19,7 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import org.spacebison.common.CrashlyticsLog;
@@ -48,6 +50,10 @@ public class ServerActivity extends AppCompatActivity implements ServiceConnecti
     protected Toolbar mToolbar;
     @Bind(R.id.recycler)
     protected RecyclerView mRecyclerView;
+    @Bind(R.id.image)
+    protected ImageView mImage;
+    @Bind(R.id.fab)
+    protected FloatingActionButton mFab;
 
     private Messenger mServerService;
 
@@ -119,6 +125,7 @@ public class ServerActivity extends AppCompatActivity implements ServiceConnecti
         super.onDestroy();
         if (mServerService != null) {
             unbindService(this);
+            mServerService = null;
         }
 
         unregisterReceiver(mReceiver);
@@ -177,13 +184,26 @@ public class ServerActivity extends AppCompatActivity implements ServiceConnecti
     private class Receiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            Log.d(TAG, "Received: " + intent);
+            CrashlyticsLog.d(TAG, "Received: " + intent);
             if (intent.getAction().equals(Util.getFullName(context, ServerService.Action.CLIENT_LIST_CHANGED))) {
                 mAdapter.clear();
                 final List<String> names = Arrays.asList(intent.getStringArrayExtra(Util.getFullName(context, ServerService.Extra.CLIENT_ARRAY)));
                 Log.d(TAG, "Names: " + names);
                 mAdapter.addAll(names);
                 mAdapter.notifyDataSetChanged();
+            } else if (intent.getAction().equals(Util.getFullName(context, ClientService.Action.STATE_CHANGED))) {
+                ClientService.RecordingState state = (ClientService.RecordingState) intent.getSerializableExtra(Util.getFullName(context, ClientService.Extra.STATE));
+                switch (state) {
+                    case DISCONNECTED:
+                    case CONNECTED:
+                        mImage.setImageResource(R.drawable.ic_mic_none_big);
+                        mFab.setImageResource(R.drawable.ic_mic_24dp_white);
+                        break;
+                    case RECORDING:
+                        mImage.setImageResource(R.drawable.ic_mic_big);
+                        mFab.setImageResource(R.drawable.ic_stop_24dp);
+                        break;
+                }
             }
         }
     }

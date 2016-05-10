@@ -1,6 +1,10 @@
 package org.spacebison.multimic.ui;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -12,6 +16,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import org.spacebison.common.CrashlyticsLog;
+import org.spacebison.common.Util;
 import org.spacebison.multimic.R;
 import org.spacebison.multimic.model.ClientService;
 import org.spacebison.multimic.net.discovery.MulticastServiceResolver;
@@ -25,46 +30,16 @@ import butterknife.Bind;
 import butterknife.ButterKnife;
 
 public class ServerSearchActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener, MulticastServiceResolver.Listener {
-
     private static final String TAG = "ServerSearchActivity";
+
+    private final Receiver mReceiver = new Receiver();
+
     @Bind(R.id.swipe_layout)
     SwipeRefreshLayout mSwipeLayout;
     @Bind(R.id.recycler)
     RecyclerView mRecyclerView;
 
     private ServiceListAdapter mAdapter;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_server_search);
-        ButterKnife.bind(this);
-
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
-        mSwipeLayout.setOnRefreshListener(this);
-        mSwipeLayout.setColorSchemeResources(R.color.accent);
-
-        mAdapter = new ServiceListAdapter();
-        mRecyclerView.setAdapter(mAdapter);
-        mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        mSwipeLayout.post(new Runnable() {
-            @Override
-            public void run() {
-                mSwipeLayout.setRefreshing(true);
-                searchForServers();
-            }
-        });
-    }
-
-    private void searchForServers() {
-        ClientService.resolveServers(5000, this);
-    }
 
     @Override
     public void onRefresh() {
@@ -96,15 +71,65 @@ public class ServerSearchActivity extends AppCompatActivity implements SwipeRefr
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_server_search);
+        ButterKnife.bind(this);
+
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+        mSwipeLayout.setOnRefreshListener(this);
+        mSwipeLayout.setColorSchemeResources(R.color.accent);
+
+        mAdapter = new ServiceListAdapter();
+        mRecyclerView.setAdapter(mAdapter);
+        mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        registerReceiver(mReceiver, ClientService.getIntentFilter(this));
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(mReceiver);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        mSwipeLayout.post(new Runnable() {
+            @Override
+            public void run() {
+                mSwipeLayout.setRefreshing(true);
+                searchForServers();
+            }
+        });
+    }
+
+    private void searchForServers() {
+        ClientService.resolveServers(5000, this);
+    }
+
     class ServiceViewHolder extends RecyclerView.ViewHolder {
         @Bind(R.id.name)
         TextView mName;
         @Bind(R.id.address)
         TextView mAddress;
 
+        ResolvedService mService;
+
         public ServiceViewHolder(View itemView) {
             super(itemView);
             ButterKnife.bind(this, itemView);
+            itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (mService != null) {
+                        ClientService.start(ServerSearchActivity.this, mService);
+                    }
+                }
+            });
         }
     }
 
@@ -123,6 +148,7 @@ public class ServerSearchActivity extends AppCompatActivity implements SwipeRefr
             CrashlyticsLog.d(TAG, "Service " + position + ": " + service);
             holder.mName.setText(service.name);
             holder.mAddress.setText(service.address.getHostAddress());
+            holder.mService = service;
         }
 
         @Override
@@ -142,6 +168,19 @@ public class ServerSearchActivity extends AppCompatActivity implements SwipeRefr
                     notifyDataSetChanged();
                 }
             });
+        }
+    }
+
+    private class Receiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(final Context context, Intent intent) {
+            CrashlyticsLog.d(TAG, "Got broadcast: " + intent);
+            if (intent.getAction().equals(Util.getFullName(context, ClientService.Action.CONNECTED))) {
+                final Intent client = new Intent(context, ClientActivity.class);
+                client.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(client);
+                ActivityCompat.finishAffinity(ServerSearchActivity.this);
+            }
         }
     }
 }

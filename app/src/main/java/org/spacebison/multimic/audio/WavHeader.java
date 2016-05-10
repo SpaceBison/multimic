@@ -8,4 +8,14 @@ public class WavHeader {
     public int sampleRate;
     public short bitsPerSample;
     public int numSamples;
+
+    @Override
+    public String toString() {
+        return "WavHeader{" +
+                "channels=" + numChannels +
+                ", sample rate=" + sampleRate +
+                ", bits/sample=" + bitsPerSample +
+                ", samples=" + numSamples +
+                '}';
+    }
 }

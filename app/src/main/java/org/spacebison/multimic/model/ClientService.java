@@ -1,6 +1,6 @@
 package org.spacebison.multimic.model;
 
-import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
@@ -16,7 +16,7 @@ import android.os.Parcelable;
 import android.os.RemoteException;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v7.app.NotificationCompat;
+import android.support.v4.app.NotificationCompat;
 
 import org.spacebison.common.CrashlyticsLog;
 import org.spacebison.common.Util;
@@ -35,6 +35,7 @@ import org.spacebison.multimic.net.message.NtpRequest;
 import org.spacebison.multimic.net.message.NtpResponse;
 import org.spacebison.multimic.net.message.StartRecord;
 import org.spacebison.multimic.net.message.StopRecord;
+import org.spacebison.multimic.ui.MainActivity;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -72,7 +73,7 @@ public class ClientService extends Service implements Handler.Callback {
         return context.startService(intent);
     }
 
-    public static void requestStateUpdate(Messenger service) throws RemoteException {
+    public static void requestStateUpdate(@NonNull Messenger service) throws RemoteException {
         final android.os.Message msg = android.os.Message.obtain();
         msg.what = MessageWhat.UPDATE_STATE.ordinal();
         service.send(msg);
@@ -137,19 +138,33 @@ public class ClientService extends Service implements Handler.Callback {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        if (intent != null) {
-            init(intent);
-        }
         return mMessenger.getBinder();
     }
 
     private void init(@NonNull Intent intent) {
         ResolvedService serverService = intent.getParcelableExtra(Extra.RESOLVED_SERVICE.name());
         mExecutor.execute(new ClientTask(serverService));
+        updateState(mRecordingState);
     }
 
     private void updateState(RecordingState state) {
         mRecordingState = state;
+        NotificationCompat.Builder notificationBuilder = getNotificationBuilder();
+
+        switch (mRecordingState) {
+            case DISCONNECTED:
+            case CONNECTED:
+                notificationBuilder.setSmallIcon(R.drawable.ic_mic_none_24dp_white);
+                break;
+            case RECORDING:
+                notificationBuilder.setSmallIcon(R.drawable.ic_mic_24dp_white);
+                break;
+        }
+
+        notificationBuilder.setContentText(mRecordingState.name());
+
+        startForeground(NOTIF_ID, notificationBuilder.build());
+
         broadcastState();
     }
 
@@ -176,11 +191,16 @@ public class ClientService extends Service implements Handler.Callback {
         }
     }
 
-    private android.support.v4.app.NotificationCompat.Builder getNotificationBuilder() {
+    private NotificationCompat.Builder getNotificationBuilder() {
+        final Intent notificationIntent = new Intent(this, MainActivity.class);
+        notificationIntent.setAction(Intent.ACTION_MAIN);
+        notificationIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
         return new NotificationCompat.Builder(this)
                 .setOngoing(true)
-                .setSmallIcon(R.drawable.ic_mic_white_24dp)
-                .setContentTitle(getString(R.string.app_name));
+                .setSmallIcon(R.drawable.ic_mic_none_24dp_white)
+                .setContentTitle(getString(R.string.app_name))
+                .setContentIntent(pendingIntent);
     }
 
     public enum Action {
@@ -195,6 +215,16 @@ public class ClientService extends Service implements Handler.Callback {
         SERVER,
         RECORD_ID,
         STATE;
+    }
+
+    public enum RecordingState {
+        DISCONNECTED,
+        CONNECTED,
+        RECORDING;
+    }
+
+    public enum MessageWhat {
+        UPDATE_STATE;
     }
 
     private class ClientTask implements Runnable {
@@ -226,8 +256,8 @@ public class ClientService extends Service implements Handler.Callback {
 
                 mServer = new Server(socket, hello.name);
 
-                Intent connectedBroadcast = new Intent(Action.CONNECTED.name());
-                connectedBroadcast.putExtra(Extra.SERVER.name(), mServer.name);
+                Intent connectedBroadcast = new Intent(Util.getFullName(ClientService.this, Action.CONNECTED));
+                connectedBroadcast.putExtra(Util.getFullName(ClientService.this, Extra.SERVER), mServer.name);
                 sendBroadcast(connectedBroadcast);
             } catch (Exception e) {
                 CrashlyticsLog.e(TAG, "Error connecting to server: " + e);
@@ -293,11 +323,6 @@ public class ClientService extends Service implements Handler.Callback {
                                 }
                             });
 
-                            Notification notification = getNotificationBuilder()
-                                    .setContentText(getString(R.string.recording))
-                                    .build();
-                            startForeground(NOTIF_ID, notification);
-
                             mStreamForwardFuture = mExecutor.submit(streamForwardTask);
                             mScheduledExecutor.schedule(new Runnable() {
                                 @Override
@@ -335,20 +360,11 @@ public class ClientService extends Service implements Handler.Callback {
                 } catch (IOException e) {
                     CrashlyticsLog.e(TAG, "Client session error: " + e);
                     updateState(RecordingState.DISCONNECTED);
+                    stopForeground(true);
                     stopSelf();
                     return;
                 }
             }
         }
-    }
-
-    public enum RecordingState {
-        DISCONNECTED,
-        CONNECTED,
-        RECORDING;
-    }
-
-    public enum MessageWhat {
-        UPDATE_STATE;
     }
 }

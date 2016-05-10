@@ -82,7 +82,7 @@ public class WavUtils {
         byte[] shortArray = new byte[2];
         byte[] intArray = new byte[4];
         inputStream.read(intArray);
-        int chunkId = fromEndianSwappedByteArrayToInt(intArray);
+        int chunkId = toEndianSwappedInt(intArray);
 
         if (chunkId != 0x46464952) {
             throw new WavHeaderException("Invalid chunkId: " + Integer.toHexString(chunkId) + " (should be " + Integer.toHexString(0x46464952) + ')');
@@ -107,7 +107,7 @@ public class WavUtils {
         return array;
     }
 
-    public static int fromEndianSwappedByteArrayToInt(byte[] array) {
+    public static int toEndianSwappedInt(byte[] array) {
         int integer = 0;
 
         for (int i = 0; i < 4; ++i) {
@@ -129,7 +129,7 @@ public class WavUtils {
         return array;
     }
 
-    public static short fromEndianSwappedByteArrayToShort(byte[] array) {
+    public static short toEndianSwappedShort(byte[] array) {
         short integer = 0;
 
         for (int i = 0; i < 2; ++i) {

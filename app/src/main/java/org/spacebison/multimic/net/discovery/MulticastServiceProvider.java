@@ -2,8 +2,8 @@ package org.spacebison.multimic.net.discovery;
 
 import android.os.NetworkOnMainThreadException;
 import android.support.annotation.NonNull;
-import org.spacebison.common.CrashlyticsLog;
 
+import org.spacebison.common.CrashlyticsLog;
 import org.spacebison.multimic.net.discovery.message.DiscoveryRequest;
 import org.spacebison.multimic.net.discovery.message.ResolvedService;
 
@@ -18,6 +18,8 @@ import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -102,6 +104,7 @@ public class MulticastServiceProvider {
                     ois.close();
 
                     CrashlyticsLog.d(TAG, "Received request from: " + packet.getAddress() + ": " + request);
+                    CrashlyticsLog.d(TAG, "Socket address: " + packet.getSocketAddress());
 
                     if (request.version > mVersion) {
                         CrashlyticsLog.w(TAG, "Got request for a higher version, dropping");
@@ -114,6 +117,9 @@ public class MulticastServiceProvider {
 
                             try {
                                 //clientSocket.connect(new InetSocketAddress(packet.getAddress(), packet.getPort()));
+
+                                List<InetAddress> addresses = Collections.list(socket.getNetworkInterface().getInetAddresses());
+                                CrashlyticsLog.d(TAG, "Addresses: " + addresses);
 
                                 ResolvedService resolvedService = buildResolvedService(socket.getNetworkInterface().getInetAddresses().nextElement());
 

@@ -1,11 +1,9 @@
 package org.spacebison.multimic.model;
 
 import android.app.Service;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -14,8 +12,8 @@ import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
 import android.support.annotation.Nullable;
-import org.spacebison.common.CrashlyticsLog;
 
+import org.spacebison.common.CrashlyticsLog;
 import org.spacebison.common.Util;
 import org.spacebison.multimic.Prefs;
 import org.spacebison.multimic.audio.WavFileEncoder;
@@ -48,7 +46,7 @@ import java.util.concurrent.Future;
 /**
  * Created by cmb on 10.02.16.
  */
-public class ServerService extends Service implements ListeningServer.Listener, Handler.Callback, ServiceConnection {
+public class ServerService extends Service implements ListeningServer.Listener, Handler.Callback {
     private static final String TAG = "ServerService";
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
     private static final File REC_DIR = new File(Environment.getExternalStorageDirectory(), "MultiMic");
@@ -68,7 +66,6 @@ public class ServerService extends Service implements ListeningServer.Listener, 
     private Messenger mMessenger;
     private String mName;
     private MulticastServiceProvider mServiceProvider;
-    private boolean mClientServiceConnected;
 
     public static IntentFilter getIntentFilter(Context context) {
         IntentFilter filter = new IntentFilter();
@@ -97,6 +94,8 @@ public class ServerService extends Service implements ListeningServer.Listener, 
     @Override
     public void onClientConnected(final Socket socket) {
         try {
+            socket.setKeepAlive(true);
+
             CrashlyticsLog.d(TAG, "Saying hello");
             new WriteJsonTask(socket.getOutputStream(), new Hello(mName)).run();
 
@@ -164,7 +163,7 @@ public class ServerService extends Service implements ListeningServer.Listener, 
         mServiceProvider = new MulticastServiceProvider(mName, Config.DISCOVERY_MULTICAST_GROUP, Config.DISCOVERY_MULTICAST_PORT, Config.SERVER_PORT);
         mServiceProvider.start();
         mServer.start();
-        bindService(ClientService.getIntent(this, mServiceProvider.getResovledService()), this, BIND_AUTO_CREATE);
+        ClientService.start(this, mServiceProvider.getResovledService());
     }
 
     @Override
@@ -178,11 +177,6 @@ public class ServerService extends Service implements ListeningServer.Listener, 
         super.onDestroy();
 
         disconnectAllClients();
-
-        if (mClientServiceConnected) {
-            mClientServiceConnected = false;
-            unbindService(this);
-        }
 
         mServer.stop();
         mServiceProvider.stop();
@@ -210,18 +204,6 @@ public class ServerService extends Service implements ListeningServer.Listener, 
             default:
                 return false;
         }
-    }
-
-    @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
-        CrashlyticsLog.d(TAG, "Client service connected");
-        mClientServiceConnected = true;
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName name) {
-        CrashlyticsLog.d(TAG, "Client service disconnected");
-        mClientServiceConnected = false;
     }
 
     private void disconnectAllClients() {
